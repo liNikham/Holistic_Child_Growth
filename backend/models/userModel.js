@@ -1,4 +1,4 @@
-const monngoose = require('mongoose')
+const mongoose = require('mongoose')
 const bcrypt = require('bcrypt');
 
 const childSchema = new mongoose.Schema({
@@ -23,7 +23,7 @@ childSchema.pre('save',async function(next){
     next();
 })
 
-const userSchema = new monngoose.Schema({
+const userSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -59,5 +59,5 @@ userSchema.pre('save',async function(next){
     return await bcrypt.compare(password,this.password);
  }
 
- const User = monngoose.model('User',userSchema);
+ const User = mongoose.model('User',userSchema);
  module.exports = User;
