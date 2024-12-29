@@ -3,10 +3,11 @@ import { Button, Label, TextInput } from 'flowbite-react';
 import {useDispatch, useSelector} from "react-redux";
 import { registerStart, registerSuccess, registerFailure } from '../features/userSlice';
 import axios from 'axios';
-
+import { useNavigate } from 'react-router-dom';
 const RegisterPage = () => {
     const dispatch = useDispatch();
     const { loading,error } = useSelector((state) => state.user);
+    const navigate = useNavigate();
     const [formData,setFormData] = React.useState({
       name : "",
       email : "",
@@ -37,6 +38,7 @@ const RegisterPage = () => {
              password
           });
           dispatch(registerSuccess(response.data));
+          navigate('/');
         }catch(err){
           dispatch(registerFailure(err.response?.data?.message || 'Registration failed'));
         }
