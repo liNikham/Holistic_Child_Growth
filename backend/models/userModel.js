@@ -59,5 +59,8 @@ userSchema.pre('save',async function(next){
     return await bcrypt.compare(password,this.password);
  }
 
+
+ const Child = mongoose.model('Child',childSchema);
+
  const User = mongoose.model('User',userSchema);
  module.exports = User;
