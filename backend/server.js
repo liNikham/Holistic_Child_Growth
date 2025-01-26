@@ -2,8 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const authRoutes = require("./routes/authRoutes");
-
+const routes = require("./routes/index.routes");
 dotenv.config();
 
 const app = express();
@@ -22,8 +21,10 @@ const connectDB = async () => {
 
 connectDB();
 
-app.use("/users", authRoutes);
-
+app.use(routes);
+app.get("/*", (req, res) => {
+    res.status(200).json({status: "success", message: "Backend is UP and Running"});
+  });
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

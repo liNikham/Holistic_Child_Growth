@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-
-const verifyToken = ( req, res, next ) => {
+const User = require('../models/user.model');
+const verifyToken = async( req, res, next ) => {
      const token = req.header('Authorization');
      if(!token){
          return res.status(401).json({
@@ -9,8 +9,18 @@ const verifyToken = ( req, res, next ) => {
      }
      try{
          const decoded = jwt.verify(token,process.env.JWT_SECRET_KEY);
-         req.user = decoded.userId;
-         req.role = decoded.role;
+         const existUser = await User.findById(decoded.userId);
+         if(!existUser){
+             return res.status(404).json({
+                 message:"User not found"
+             })
+         }
+         const authorizedGuardian = existUser.Children.find(child => child === req.query.childId);
+         if(!authorizedGuardian){
+             return res.status(403).json({
+                 message:"Unauthorized"
+             })
+         }
          next();
      } catch(err){
          res.status(400).json({

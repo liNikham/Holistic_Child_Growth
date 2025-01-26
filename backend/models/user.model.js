@@ -1,28 +1,6 @@
 const mongoose = require('mongoose')
 const bcrypt = require('bcrypt');
 
-const childSchema = new mongoose.Schema({
-     name : { 
-        type :String,
-         email : { 
-            type:String, 
-            required:true,
-            unique:true
-         },
-         password:{
-             type:String, 
-             required:true
-         }
-
-     }
-})
-
-childSchema.pre('save',async function(next){
-    if(!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password,10);
-    next();
-})
-
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -37,13 +15,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    role:{
-        type:String, 
-        enum:["parent","child"],
-        default:"parent"
-
-    },
-    children:[childSchema]
+    children:[
+        {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Child"
+        }
+    ]
     }
 );
 
@@ -58,9 +35,6 @@ userSchema.pre('save',async function(next){
  userSchema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password,this.password);
  }
-
-
- const Child = mongoose.model('Child',childSchema);
 
  const User = mongoose.model('User',userSchema);
  module.exports = User;
