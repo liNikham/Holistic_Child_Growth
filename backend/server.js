@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
+const childRoutes = require("./routes/childRoutes");
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const connectDB = async () => {
 connectDB();
 
 app.use("/users", authRoutes);
+app.use("/children", childRoutes);
 
 const PORT = process.env.PORT || 5000;
 

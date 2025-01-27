@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 exports.createToken = (userId,user)=>{
      return jwt.sign({
@@ -6,5 +7,5 @@ exports.createToken = (userId,user)=>{
         name:user.name,
         email:user.email,
         role:user.role
-     },process.env.JWT_SECRET,{expiresIn:"1d"})
+     },process.env.JWT_SECRET)
 };

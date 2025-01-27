@@ -8,11 +8,6 @@ const registerSchema = z.object({
     email:z.string().email("Invalid email address"),
     password:z.string().min(6,"Password must be at least 6 characters long")
 })
-const childSchema = z.object({
-    name: z.string().min(3,"Name must be at least 3 characters long"),
-    email:z.string().email("Invalid email address"), 
-    password:z.string().min(6,"Password must be at least 6 characters long")
-})
 
 
 const registerParent = async (req, res) => {
@@ -73,59 +68,9 @@ const loginUser = async(req,res)=>{
 }
 
 
-const addChildProfile = async ( req, res)=>{
-    try{
-        const parent = await User.findById(req.user);
-        if(!parent){
-            return res.status(404).json({
-                message:"Parent not found"
-            })
-        }
-        const {name,email,password}= childSchema.parse(req.body);
-        const childExists = parent.children.find((child) => child.email === email);
-        if(childExists){
-             return res.status(400).json({
-                error:"Child already exists"
-             })
-        }
-        parent.children.push({
-            name,
-            email,
-            password
-        })
-         await parent.save();
-         res.status(201).json({
-            message:"Child added successfully",
-            children:parent.children
-         })
-        }
-        catch(err){
-            res.status(400).json({
-                message:err.message
-            })  
-        }
 
-
-}
-
-const getChildProfiles  = async ( req, res ) =>{
-     try { 
-         const parent  = await User.findById(req.user);
-         if(!parent) return res.status(404).json({message:"Parent not found"});
-         res.status(200).json({
-             children:parent.children
-         })
-     }
-     catch(err){
-         res.status(400).json({
-             message:err.message
-         })
-     }
-}
 
 module.exports = {
     registerParent,
-    loginUser,
-    addChildProfile,
-    getChildProfiles
+    loginUser
 }
