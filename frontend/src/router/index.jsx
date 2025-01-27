@@ -11,6 +11,7 @@ import MilestoneTracker from "../pages/MilestoneTracker";
 import ActivitySuggestions from "../pages/ActivitySuggestions";
 import GrowthJournal from "../pages/GrowthJournal";
 import ChildDashboard from "../pages/ChildDashboard";
+import ParentProfile from '../pages/ParentProfile';
 
 const PrivateRoute = ({ children }) => {
     const { currentUser } = useSelector((state) => state.user);
@@ -104,6 +105,16 @@ const AppRouter = () => {
                         <PrivateRoute>
                             <PrivateLayout>
                                 <GrowthJournal />
+                            </PrivateLayout>
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/profile"
+                    element={
+                        <PrivateRoute>
+                            <PrivateLayout>
+                                <ParentProfile />
                             </PrivateLayout>
                         </PrivateRoute>
                     }
