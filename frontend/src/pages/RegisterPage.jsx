@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 const RegisterPage = () => {
     const dispatch = useDispatch();
-    const { loading,error } = useSelector((state) => state.user);
+    const { loginLoading, loginError } = useSelector((state) => state.user);
     const navigate = useNavigate();
     const [formData,setFormData] = React.useState({
       name : "",
@@ -106,8 +106,8 @@ const RegisterPage = () => {
                 <Button type="submit" gradientDuoTone="greenToBlue" className="w-full">
                     Register
                 </Button>
-                {loading && <p className="text-sm text-center mt-4">Loading...</p>}
-                {error && <p className="text-sm text-center mt-4 text-red-500">{error}</p>}
+                {loginLoading && <p className="text-sm text-center mt-4">Loading...</p>}
+                {loginError && <p className="text-sm text-center mt-4 text-red-500">{error}</p>}
                 <p className="text-sm text-center mt-4">
                     Already have an account?{' '}
                     <a href="/" className="text-blue-500 hover:underline">

@@ -4,12 +4,13 @@ import {useDispatch,useSelector} from "react-redux";
 import { signInStart, signInSuccess, signInFailure } from '../features/userSlice';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { loading,error } = useSelector((state) => state.user);
+    const { loginLoading, loginError } = useSelector((state) => state.user);
 
     const handleLogin =  async (e) => {
         e.preventDefault();
@@ -36,7 +37,7 @@ const LoginPage = () => {
 
                 <h1 className="text-2xl font-semibold text-center mb-4">Login</h1>
                 {
-                    error && (
+                    loginError && (
                         <p className="text-sm text-center mb-4 text-red-600">{error}</p>
                     )
                 }
@@ -65,9 +66,9 @@ const LoginPage = () => {
                     />
                 </div>
                 <Button type="submit" gradientDuoTone="cyanToBlue" className="w-full"
-                        disabled={loading}
+                        disabled={loginLoading}
                 >
-                {loading ? 'Logging in...' : 'Login'}
+                {loginLoading ? 'Logging in...' : 'Login'}
                 </Button>
                 <p className="text-sm text-center mt-4">
                     Don’t have an account?{' '}

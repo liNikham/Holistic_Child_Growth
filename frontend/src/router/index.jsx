@@ -6,6 +6,7 @@ import AddChildProfile from "../components/AddChildProfile";
 const AppRouter = ()=>{
     return (
         <Router>
+            <Navbar />
             <Routes>
                  <Route path="/" element={<LoginPage />} />
                  <Route path="/register" element={<RegisterPage />} />
