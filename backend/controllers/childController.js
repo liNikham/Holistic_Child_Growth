@@ -22,8 +22,10 @@ exports.createChildProfile = async (req, res) => {
 // Get all child profiles for the logged-in parent
 exports.getAllChildProfiles = async (req, res) => {
   try {
-    const parentId = req.user._id; // Extracted from the logged-in parent's token
+    const parentId = req.user; // Extracted from the logged-in parent's token
     const children = await ChildProfile.find({ parentId });
+    console.log("hello")
+    console.log(children);
     res.status(200).json(children);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching child profiles', error: err.message });

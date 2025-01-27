@@ -3,6 +3,7 @@ import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import Dashboard from "../pages/DashBoard";
 import AddChildProfile from "../components/AddChildProfile";
+import ActivityPage from "../pages/ActivityPage";
 import { Navbar } from "flowbite-react";
 const AppRouter = ()=>{
     return (
@@ -13,6 +14,7 @@ const AppRouter = ()=>{
                  <Route path="/register" element={<RegisterPage />} />
                  <Route path="/dashboard" element={<Dashboard />} />
                  <Route path="/create-child-profile" element={<AddChildProfile />} />
+                 <Route path="/child/:childId/activities" element={<ActivityPage />} />
             </Routes>
         </Router>
     )

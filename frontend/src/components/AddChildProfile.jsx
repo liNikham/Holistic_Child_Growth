@@ -12,7 +12,7 @@ const AddChildProfile = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken');
-      console.log(token);
+      
 
       await axios.post(
         '/api/children/createChildProfile',
