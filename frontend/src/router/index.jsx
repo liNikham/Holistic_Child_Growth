@@ -3,6 +3,7 @@ import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import Dashboard from "../pages/DashBoard";
 import AddChildProfile from "../components/AddChildProfile";
+import { Navbar } from "flowbite-react";
 const AppRouter = ()=>{
     return (
         <Router>
