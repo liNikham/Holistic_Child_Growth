@@ -31,3 +31,51 @@ exports.getAllChildProfiles = async (req, res) => {
     res.status(500).json({ message: 'Error fetching child profiles', error: err.message });
   }
 };
+exports.addActivity = async (req, res) => {
+  const { childId, activity, duration, date } = req.body;
+
+  try {
+    // Find the child profile
+    const childProfile = await ChildProfile.findOne({ _id: childId });
+
+    if (!childProfile) {
+      return res.status(404).json({ message: 'Child profile not found' });
+    }
+
+    // Add the new activity
+    childProfile.activities.push({
+      activity,
+      category: '', // You can add a category if needed
+      duration,
+      date: new Date(date),
+      notes: '', // Optional notes if needed
+    });
+
+    await childProfile.save();
+    res.status(201).json({ message: 'Activity added successfully', childProfile });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+
+// Get activities for a specific child profile
+exports.getActivitiesByChildId = async (req, res) => {
+  const { childId } = req.params; // Get the childId from the route parameter
+
+  try {
+    // Find the child profile by ID
+    const childProfile = await ChildProfile.findOne({ _id: childId });
+
+    if (!childProfile) {
+      return res.status(404).json({ message: 'Child profile not found' });
+    }
+
+    // Send the activities back in the response
+    res.status(200).json({ activities: childProfile.activities });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching activities', error: error.message });
+  }
+};

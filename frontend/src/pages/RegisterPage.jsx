@@ -1,120 +1,172 @@
-import React from 'react';
-import { Button, Label, TextInput } from 'flowbite-react';
-import {useDispatch, useSelector} from "react-redux";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from "react-redux";
 import { registerStart, registerSuccess, registerFailure } from '../features/userSlice';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+
 const RegisterPage = () => {
-    const dispatch = useDispatch();
-    const { loginLoading, loginError } = useSelector((state) => state.user);
-    const navigate = useNavigate();
-    const [formData,setFormData] = React.useState({
-      name : "",
-      email : "",
-      password : "",
-      confirmPassword : ""
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phoneNumber: '',
     });
-    const { name, email, password, confirmPassword } = formData;
+
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { loginLoading, loginError } = useSelector((state) => state.user);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prevFormData) => ({
-            ...prevFormData,
-            [name]: value,
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value
         }));
-    }
+    };
 
     const handleRegister = async (e) => {
         e.preventDefault();
-        if(password !== confirmPassword){
-          dispatch(registerFailure("Passwords do not match"));
-          return;
+        if (formData.password !== formData.confirmPassword) {
+            dispatch(registerFailure("Passwords do not match"));
+            return;
         }
+
         dispatch(registerStart());
-        try{
-          console.log(formData);
-          const response = await axios.post('/api/users/register',{
-             name,
-             email,
-             password
-          });
-          dispatch(registerSuccess(response.data));
-          navigate('/');
-        }catch(err){
-          dispatch(registerFailure(err.response?.data?.message || 'Registration failed'));
+        try {
+            const response = await axios.post('/api/users/register', {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                phoneNumber: formData.phoneNumber
+            });
+            dispatch(registerSuccess(response.data));
+            navigate('/login');
+        } catch (err) {
+            dispatch(registerFailure(err.response?.data?.message || 'Registration failed'));
         }
     };
 
     return (
-        <div className="flex justify-center items-center h-screen bg-gray-100">
-            <form
-                onSubmit={handleRegister}
-                className="w-full max-w-md bg-white p-6 rounded shadow-md"
-            >
-                <h1 className="text-2xl font-semibold text-center mb-4">Register</h1>
-                <div className="mb-4">
-                    <Label htmlFor="name" value="Name" />
-                    <TextInput
-                        id="name"
-                        name="name"
-                        type="text"
-                         value={name}
-                         onChange={handleInputChange}
-                        placeholder="Enter your name"
-                        required={true}
-                        className="mt-1"
-                    />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full space-y-8">
+                <div>
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Create Your Parent Account
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-gray-600">
+                        Start tracking your child's growth journey
+                    </p>
                 </div>
-                <div className="mb-4">
-                    <Label htmlFor="email" value="Email" />
-                    <TextInput
-                        id="email"
-                        name="email"
-                        value={email}
-                        onChange={handleInputChange}
-                        type="email"
-                        placeholder="Enter your email"
-                        required={true}
-                        className="mt-1"
-                    />
-                </div>
-                <div className="mb-4">
-                    <Label htmlFor="password" value="Password" />
-                    <TextInput
-                        id="password"
-                        name='password'
-                        value={password}
-                        onChange={handleInputChange}
-                        type="password"
-                        placeholder="Enter your password"
-                        required={true}
-                        className="mt-1"
-                    />
-                </div>
-                <div className="mb-6">
-                    <Label htmlFor="confirm-password" value="Confirm Password" />
-                    <TextInput
-                        id="confirm-password"
-                        type="password"
-                        name='confirmPassword'
-                        value={confirmPassword}
-                        onChange={handleInputChange}
-                        placeholder="Confirm your password"
-                        required={true}
-                        className="mt-1"
-                    />
-                </div>
-                <Button type="submit" gradientDuoTone="greenToBlue" className="w-full">
-                    Register
-                </Button>
-                {loginLoading && <p className="text-sm text-center mt-4">Loading...</p>}
-                {loginError && <p className="text-sm text-center mt-4 text-red-500">{error}</p>}
-                <p className="text-sm text-center mt-4">
-                    Already have an account?{' '}
-                    <a href="/" className="text-blue-500 hover:underline">
-                        Login
-                    </a>
-                </p>
-            </form>
+
+                <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+                    {loginError && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            {loginError}
+                        </div>
+                    )}
+
+                    <div className="rounded-md shadow-sm space-y-4">
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                Full Name
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Enter your full name"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                Email address
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Enter your email"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                                Phone Number
+                            </label>
+                            <input
+                                id="phoneNumber"
+                                name="phoneNumber"
+                                type="tel"
+                                value={formData.phoneNumber}
+                                onChange={handleInputChange}
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Enter your phone number"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Create a password"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                                Confirm Password
+                            </label>
+                            <input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                required
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange}
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                placeholder="Confirm your password"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={loginLoading}
+                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            {loginLoading ? 'Creating account...' : 'Create Account'}
+                        </button>
+                    </div>
+
+                    <div className="text-center">
+                        <p className="text-sm text-gray-600">
+                            Already have an account?{' '}
+                            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                                Sign in
+                            </Link>
+                        </p>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };
