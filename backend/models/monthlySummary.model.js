@@ -9,4 +9,4 @@ const monthlySummarySchema = new mongoose.Schema({
     timestamps: true
 })
 
-const MonthlySummary = mongoose.model('MonthlySummary', monthlySummarySchema);
+export const MonthlySummary = mongoose.model('MonthlySummary', monthlySummarySchema);
