@@ -8,5 +8,5 @@ const childDocumentSchema = new mongoose.Schema({
     timestamps: true
 })
 
-const ChildDocument = mongoose.model('ChildDocument', childDocumentSchema);
+export const ChildDocument = mongoose.model('ChildDocument', childDocumentSchema);
 
