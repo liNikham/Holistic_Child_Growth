@@ -1,15 +1,15 @@
 const express = require('express');
-const router = express.Router();
-const childController = require('../controllers/childController'); // Import the controller
+const childActivity = require('../controllers/childActivity.controller'); // Import the controller
 const openai = require('../utils/openAiService');
-const { verifyToken, restrictTo } = require('../middleware/authMiddleware');
+const { verifyToken } = require('../middleware/authMiddleware');
 // Route to create a child profile
-router.post('/createChildProfile',verifyToken, childController.createChildProfile);
 
-// Route to get all child profiles for a parent
-router.get('/getAllChildProfiles', verifyToken,childController.getAllChildProfiles);
-router.post('/addActivity',verifyToken,childController.addActivity);
-router.get('/getActivities/:childId', verifyToken, childController.getActivitiesByChildId); 
+const router = express.Router();
+
+router.post('/createChildProfile',verifyToken, childActivity.createChildProfile);
+router.get('/getAllChildProfiles', verifyToken,childActivity.getAllChildProfiles);
+router.post('/addActivity',verifyToken,childActivity.addActivity);
+router.get('/getActivities/:childId', verifyToken, childActivity.getActivitiesByChildId); 
 router.post('/performAnalysis',verifyToken,openai.generateAnalysis);
 
 // Add more routes as needed

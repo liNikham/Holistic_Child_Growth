@@ -15,7 +15,7 @@ const childSchema = z.object({
 })
 
 
-const registerParent = async (req, res) => {
+exports.registerParent = async (req, res) => {
     try {
         const { name, email, password } = registerSchema.parse(req.body);
         const existingUser = await User.findOne({ email });
@@ -42,7 +42,7 @@ const registerParent = async (req, res) => {
 }
 
 
-const loginUser = async (req, res) => {
+exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
@@ -73,7 +73,7 @@ const loginUser = async (req, res) => {
 }
 
 
-const addChildProfile = async (req, res) => {
+exports.addChildProfile = async (req, res) => {
     try {
         const parent = await User.findById(req.user);
         if (!parent) {
@@ -108,7 +108,7 @@ const addChildProfile = async (req, res) => {
 
 }
 
-const getChildProfiles = async (req, res) => {
+exports.getChildProfiles = async (req, res) => {
     try {
         const parent = await User.findById(req.user);
         if (!parent) return res.status(404).json({ message: "Parent not found" });
@@ -123,9 +123,3 @@ const getChildProfiles = async (req, res) => {
     }
 }
 
-module.exports = {
-    registerParent,
-    loginUser,
-    addChildProfile,
-    getChildProfiles
-}
