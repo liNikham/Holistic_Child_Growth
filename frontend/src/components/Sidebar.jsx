@@ -102,7 +102,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
             </button>
 
             {/* Logo Area */}
-            <div className="p-6 mb-8">
+            <div className="p-6">
                 <div className="flex items-center justify-center">
                     <div className="bg-pink-500 bg-opacity-20 p-3 rounded-xl">
                         <FaHeart className="text-2xl text-pink-300" />

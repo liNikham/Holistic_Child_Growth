@@ -154,7 +154,7 @@ const ChildJournal = () => {
     };
 
     return (
-        <div className="p-8">
+        <div className="">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
