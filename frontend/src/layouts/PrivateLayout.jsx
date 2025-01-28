@@ -49,6 +49,12 @@ const PrivateLayout = ({ children }) => {
                                 >
                                     Journal
                                 </Link>
+                                <Link
+                                    to="/create-child-profile"
+                                    className="text-gray-600 hover:text-blue-600"
+                                >
+                                    Add Child
+                                </Link>
                             </div>
                         </div>
                         <div className="flex items-center space-x-4">
