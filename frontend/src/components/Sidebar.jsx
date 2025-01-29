@@ -157,25 +157,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                 </div>
             </nav>
 
-            {/* Bottom Section */}
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="border-t border-white border-opacity-20 pt-4">
-                    <div
-                        onClick={() => handleItemClick('/settings')}
-                        className="flex items-center p-3 text-white hover:bg-white hover:bg-opacity-10 rounded-xl transition-colors cursor-pointer"
-                    >
-                        <FaCog className="text-xl" />
-                        {!isCollapsed && <span className="ml-3">Settings</span>}
-                    </div>
-                    <div
-                        // onClick={logout}
-                        className="flex items-center w-full p-3 text-white hover:bg-white hover:bg-opacity-10 rounded-xl transition-colors cursor-pointer"
-                    >
-                        <FaSignOutAlt className="text-xl" />
-                        {!isCollapsed && <span className="ml-3">Logout</span>}
-                    </div>
-                </div>
-            </div>
+
         </div>
     );
 };
