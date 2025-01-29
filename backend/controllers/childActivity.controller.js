@@ -2,6 +2,7 @@ const ChildProfile = require('../models/childProfile.model');
 const mongoose = require('mongoose');
 const geminiService = require('../utils/geminiService')
 const MonthlySummary = require('../models/monthlySummary.model')
+const { uploadSummaryToS3 } = require('../utils/s3Config')
 // Create a child profile linked to the logged-in parent
 
 exports.createChildProfile = async (req, res) => {
@@ -123,11 +124,9 @@ exports.getActivitiesByChildId = async (req, res) => {
 exports.generateMonthlySummary = async (req, res) => {
   try {
     const { childId, month, year } = req.query;
-
     if (!childId || !month || !year) {
       return res.status(400).json({ error: "Child ID, month, and year are required." });
     }
-
     const { summary, addedToS3, error } = await geminiService.generateMonthlySummary(req.query)
     if (error) {
       return res.status(400).json({ error });
@@ -137,16 +136,15 @@ exports.generateMonthlySummary = async (req, res) => {
       summaryBody = {
         "month": month,
         "year": year,
-        "ChildId": childId,
+        "childId": childId,
         "summary": summary,
-
       }
-      const addedSummary = await MonthlySummary.create(summaryBody)
-      addedSummary.save()
       const uploadResult = await uploadSummaryToS3(summary, childId, month, year);
       if (!uploadResult.success) {
         return res.status(500).json({ error: "Failed to upload summary to S3" });
       }
+      const addedSummary = new MonthlySummary(summaryBody)
+      await addedSummary.save();
     }
 
     return res.status(200).json({ summary });

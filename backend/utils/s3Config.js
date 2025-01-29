@@ -1,14 +1,15 @@
-import {  S3Client } from "@aws-sdk/client-s3";
+const {  S3Client,GetObjectCommand,PutObjectCommand } = require("@aws-sdk/client-s3");
+require('dotenv').config();
 
 const AWSClient = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_SECOND_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
 });
 
-export async function uploadSummaryToS3(summary, childId, month, year) {
+async function uploadSummaryToS3(summary, childId, month, year) {
     const bucketName = process.env.AWS_BUCKET_NAME;
     const key = `summaries/${childId}.json`;
 
@@ -45,7 +46,7 @@ export async function uploadSummaryToS3(summary, childId, month, year) {
             ContentType: 'application/json',
         };
         await AWSClient.send(new PutObjectCommand(uploadParams));
-
+        
         return { success: true };
     } catch (error) {
         console.error("Error uploading summary to S3:", error);
@@ -62,3 +63,5 @@ function streamToString(stream) {
         stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     });
 }
+
+module.exports = { uploadSummaryToS3 };
