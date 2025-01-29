@@ -24,8 +24,10 @@ import {
     FaClock,
     FaCalendarTimes,
     FaSync,
-    FaCalendarDay
+    FaCalendarDay,
+    FaFileAlt
 } from 'react-icons/fa';
+import { FaSpinner } from 'react-icons/fa';
 
 const MonthlySummary = () => {
     const navigate = useNavigate();
@@ -70,7 +72,7 @@ const MonthlySummary = () => {
     const fetchMonthlySummary = async () => {
         setLoading(true);
         console.log("in fetchMonthlySummary");
-        console.log(selectedChild, selectedMonth,selectedYear);
+        console.log(selectedChild, selectedMonth, selectedYear);
         try {
             const token = localStorage.getItem('authToken');
             const response = await axios.get('/api/children/generateMonthlySummary', {
@@ -125,15 +127,23 @@ const MonthlySummary = () => {
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ];
-    
+
         return `${monthNames[month - 1]} ${year}`;
+    };
+
+    const isFutureMonth = (month, year) => {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
+
+        return year > currentYear || (year === currentYear && month > currentMonth);
     };
 
     const navigateMonth = (direction) => {
         setSelectedMonth((prevMonth) => {
             let newMonth = prevMonth + direction;
-            let newYear = selectedYear; // Get the current year state
-    
+            let newYear = selectedYear;
+
             if (newMonth > 12) {
                 newMonth = 1;
                 newYear++;
@@ -141,12 +151,22 @@ const MonthlySummary = () => {
                 newMonth = 12;
                 newYear--;
             }
-    
-            setSelectedYear(newYear); // Update the year state
-            return newMonth; // Update the month state
+
+            if (isFutureMonth(newMonth, newYear)) {
+                return prevMonth;
+            }
+
+            setSelectedYear(newYear);
+            return newMonth;
         });
     };
-    
+
+    useEffect(() => {
+        const today = new Date();
+        setSelectedMonth(today.getMonth() + 1);
+        setSelectedYear(today.getFullYear());
+    }, []);
+
     const getSelectedChild = () => {
         return children.find(child => child._id === selectedChild);
     };
@@ -154,11 +174,11 @@ const MonthlySummary = () => {
     const getMonthlyActivities = () => {
         const child = getSelectedChild();
         if (!child?.activities) return [];
-        
+
         return child.activities.filter(activity => {
             const activityDate = new Date(activity.date);
-            return activityDate.getMonth() + 1 === selectedMonth && 
-                   activityDate.getFullYear() === selectedYear;
+            return activityDate.getMonth() + 1 === selectedMonth &&
+                activityDate.getFullYear() === selectedYear;
         });
     };
 
@@ -170,7 +190,7 @@ const MonthlySummary = () => {
     const groupActivitiesByDate = () => {
         const activities = getMonthlyActivities();
         const grouped = {};
-        
+
         activities.forEach(activity => {
             const date = new Date(activity.date).toLocaleDateString();
             if (!grouped[date]) {
@@ -178,12 +198,94 @@ const MonthlySummary = () => {
             }
             grouped[date].push(activity);
         });
-        
+
         return grouped;
     };
 
+    const formatSummary = (text) => {
+        if (!text) return null;
+
+        // Split response into sections
+        const sections = text.split('\n\n');
+
+        return (
+            <div className="space-y-6">
+                {sections.map((section, index) => {
+                    // Handle main headers (text between **)
+                    if (section.startsWith('**') && section.endsWith('**')) {
+                        return (
+                            <h2 key={index} className="text-xl font-bold text-blue-800 border-b border-blue-200 pb-2">
+                                {section.replace(/\*\*/g, '')}
+                            </h2>
+                        );
+                    }
+
+                    // Handle sub-headers with content
+                    if (section.startsWith('**')) {
+                        const [header, ...content] = section.split('\n');
+                        return (
+                            <div key={index} className="space-y-3">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {header.replace(/\*\*/g, '')}
+                                </h3>
+                                {content.length > 0 && (
+                                    <div className="pl-4">
+                                        {content.map((item, i) => {
+                                            if (item.trim().startsWith('*')) {
+                                                return (
+                                                    <div key={i} className="flex items-start space-x-2 mb-2">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                                        <p className="text-gray-700 flex-1">
+                                                            {item.replace(/^\*\s*/, '')}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <p key={i} className="text-gray-700">
+                                                    {item}
+                                                </p>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+
+                    // Handle bullet points
+                    if (section.includes('\n* ')) {
+                        const [intro, ...bullets] = section.split('\n* ');
+                        return (
+                            <div key={index} className="space-y-3">
+                                {intro && (
+                                    <p className="text-gray-700">{intro}</p>
+                                )}
+                                <div className="space-y-2 pl-4">
+                                    {bullets.map((bullet, i) => (
+                                        <div key={i} className="flex items-start space-x-2">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                            <p className="text-gray-700 flex-1">{bullet}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Regular paragraphs
+                    return (
+                        <p key={index} className="text-gray-700 leading-relaxed">
+                            {section}
+                        </p>
+                    );
+                })}
+            </div>
+        );
+    };
+
     return (
-        <div className="">
+        <div className="space-y-6">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
@@ -205,9 +307,9 @@ const MonthlySummary = () => {
                             <option value="">Select a child</option>
                             {Array.isArray(children) && children.length > 0 ? (
                                 children.map((child) => (
-                                <option key={child._id} value={child._id}>
-                                    {child.name} ({new Date(child.dateOfBirth).toLocaleDateString()})
-                                </option>
+                                    <option key={child._id} value={child._id}>
+                                        {child.name} ({new Date(child.dateOfBirth).toLocaleDateString()})
+                                    </option>
                                 ))
                             ) : (
                                 <option value="" disabled>No children found</option>
@@ -235,21 +337,25 @@ const MonthlySummary = () => {
                     <div className="flex items-center space-x-2">
                         <FaCalendar className="text-gray-600" />
                         <span className="text-lg font-medium text-gray-700">
-                            {formatDate(selectedMonth,selectedYear)}
+                            {formatDate(selectedMonth, selectedYear)}
                         </span>
                     </div>
                     <button
                         onClick={() => navigateMonth(1)}
-                        className="p-2 hover:bg-gray-100 rounded-full"
+                        className={`p-2 rounded-full ${isFutureMonth(selectedMonth + 1, selectedYear)
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'hover:bg-gray-100 text-gray-600'
+                            }`}
+                        disabled={isFutureMonth(selectedMonth + 1, selectedYear)}
                     >
-                        <FaChevronRight className="text-gray-600" />
+                        <FaChevronRight />
                     </button>
                 </div>
             </div>
 
             {loading ? (
                 <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    <FaSpinner className="animate-spin text-4xl text-blue-600" />
                 </div>
             ) : !selectedChild ? (
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
@@ -258,9 +364,9 @@ const MonthlySummary = () => {
                     <p className="text-gray-500">Choose a child to view their monthly summary</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Child Overview */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="md:col-span-1 bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                             <FaChild className="mr-2" /> Child Overview
                         </h2>
@@ -283,7 +389,7 @@ const MonthlySummary = () => {
                     </div>
 
                     {/* Growth Metrics */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="md:col-span-2 bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                             <FaRuler className="mr-2" /> Physical Growth
                         </h2>
@@ -308,7 +414,7 @@ const MonthlySummary = () => {
                     </div>
 
                     {/* Monthly Activity Summary */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                    <div className="md:col-span-3 bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
                             <div className="flex items-center">
                                 <FaRunning className="mr-2" /> Monthly Activities
@@ -323,8 +429,8 @@ const MonthlySummary = () => {
                                     <h3 className="font-medium text-gray-700 mb-3">{date}</h3>
                                     <div className="space-y-3">
                                         {activities.map((activity) => (
-                                            <div 
-                                                key={activity._id} 
+                                            <div
+                                                key={activity._id}
                                                 className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"
                                             >
                                                 <div className="flex items-center space-x-3">
@@ -357,27 +463,27 @@ const MonthlySummary = () => {
                     </div>
 
                     {/* AI Generated Summary */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <FaBrain className="mr-2" /> Development Summary
-                        </h2>
-                        {summary ? (
-                            <div className="prose max-w-none">
-                                <div className="bg-gray-50 rounded-lg p-6">
-                                    <p className="text-gray-700 whitespace-pre-line">
-                                        {summary.summary}
-                                    </p>
+                    <div className="md:col-span-3 bg-white rounded-xl shadow-lg p-6">
+                        <div className="prose max-w-none">
+                            {summary?.summary ? (
+                                formatSummary(summary.summary)
+                            ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                    <FaFileAlt className="mx-auto text-4xl mb-2 text-gray-400" />
+                                    <p>No summary available for this month</p>
+                                    <button
+                                        onClick={fetchMonthlySummary}
+                                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        Generate Summary
+                                    </button>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8 text-gray-500">
-                                Click "Generate Summary" to get an AI-powered analysis of your child's activities
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     {/* Activity Statistics */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                    <div className="md:col-span-3 bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
                             <div className="flex items-center">
                                 <FaChartBar className="mr-2" /> Activity Statistics
@@ -406,7 +512,7 @@ const MonthlySummary = () => {
                     </div>
 
                     {/* Detailed Activities List */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                    <div className="md:col-span-3 bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
                             <div className="flex items-center">
                                 <FaListUl className="mr-2" /> Detailed Activities
@@ -428,8 +534,8 @@ const MonthlySummary = () => {
                                     </h3>
                                     <div className="space-y-3">
                                         {activities.map((activity) => (
-                                            <div 
-                                                key={activity._id} 
+                                            <div
+                                                key={activity._id}
                                                 className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                                             >
                                                 <div className="flex items-center space-x-4">
