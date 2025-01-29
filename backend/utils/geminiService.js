@@ -1,5 +1,6 @@
 const dotenv = require("dotenv");
 const axios = require("axios");
+const ChildProfile = require("../models/childProfile.model");
 dotenv.config();
 
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -75,3 +76,64 @@ exports.generateAnalysis = async (req, res) => {
         return res.status(500).json({ error: "Failed to fetch analysis" });
     }
 }; 
+
+exports.generateMonthlySummary = async (req, res) => {
+    const { childId, month, year } = req.query;
+    
+    if (!childId || !month || !year) {
+        return res.status(400).json({ error: "Child ID, month, and year are required." });
+    }
+
+    try {
+        // Fetch activities from MongoDB
+        const startDate = new Date(`${year}-${month}-01`);
+        const endDate = new Date(`${year}-${month}-31`);
+        
+        const child = await ChildProfile.findById(childId);
+        if (!child) {
+            return res.status(404).json({ error: "Child not found." });
+        }
+
+        const activities = child.activities.filter(activity => 
+            new Date(activity.date) >= startDate && new Date(activity.date) <= endDate
+        );
+
+        if (activities.length === 0) {
+            return res.status(404).json({ error: "No activities found for this period." });
+        }
+
+        const prompt = `Generate a detailed monthly summary for a child based on the following activities for ${month} ${year}:
+        ${JSON.stringify(activities)}
+        
+        The summary should include:
+        - Progress and achievements
+        - Strengths observed
+        - Areas for improvement
+        - Recommendations for further development
+        - Overall development trends`;
+
+        const config = {
+            method: "post",
+            url: `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            data: {
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            }
+        };
+
+        const response = await retryRequest(config, 5, 1000);
+        const generatedText = response.data.candidates[0].content.parts[0].text;
+
+        return res.status(200).json({ summary: generatedText.trim() });
+    } catch (error) {
+        console.error("Error generating monthly summary:", error.response?.data || error.message);
+        return res.status(500).json({ error: "Failed to generate monthly summary" });
+    }
+};
+

@@ -25,7 +25,8 @@ const MonthlySummary = () => {
     const [loading, setLoading] = useState(false);
     const [children, setChildren] = useState([]);
     const [selectedChild, setSelectedChild] = useState('');
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [summary, setSummary] = useState(null);
 
     useEffect(() => {
@@ -52,15 +53,19 @@ const MonthlySummary = () => {
 
     const fetchMonthlySummary = async () => {
         setLoading(true);
+        console.log("in fetchMonthlySummary");
+        console.log(selectedChild, selectedMonth,selectedYear);
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.get('/api/monthly-summary', {
+            const response = await axios.get('/api/children/generateMonthlySummary', {
                 headers: { Authorization: `${token}` },
                 params: {
                     childId: selectedChild,
-                    month: selectedMonth
+                    month: selectedMonth,
+                    year: selectedYear
                 }
             });
+            console.log(response.data.summary);
             setSummary(response.data);
         } catch (error) {
             console.error('Error fetching monthly summary:', error);
@@ -99,15 +104,34 @@ const MonthlySummary = () => {
         return <FaMinus className="text-gray-500" />;
     };
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const formatDate = (month, year) => {
+        const monthNames = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+    
+        return `${monthNames[month - 1]} ${year}`;
     };
 
     const navigateMonth = (direction) => {
-        const current = new Date(selectedMonth);
-        current.setMonth(current.getMonth() + direction);
-        setSelectedMonth(current.toISOString().slice(0, 7));
+        setSelectedMonth((prevMonth) => {
+            let newMonth = prevMonth + direction;
+            let newYear = selectedYear; // Get the current year state
+    
+            if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            } else if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            }
+    
+            setSelectedYear(newYear); // Update the year state
+            return newMonth; // Update the month state
+        });
     };
+    
+    
 
     return (
         <div className="">
@@ -158,7 +182,7 @@ const MonthlySummary = () => {
                     <div className="flex items-center space-x-2">
                         <FaCalendar className="text-gray-600" />
                         <span className="text-lg font-medium text-gray-700">
-                            {formatDate(selectedMonth)}
+                            {formatDate(selectedMonth,selectedYear)}
                         </span>
                     </div>
                     <button
@@ -193,11 +217,11 @@ const MonthlySummary = () => {
                                     <span className="text-gray-600 flex items-center">
                                         <FaWeight className="mr-2" /> Weight
                                     </span>
-                                    {getGrowthIndicator(summary.growth.weightChange)}
+                                    {/* {getGrowthIndicator(summary.growth.weightChange)} */}
                                 </div>
                                 <p className="text-2xl font-bold text-gray-800">{summary.growth.weight} kg</p>
                                 <p className="text-sm text-gray-500">
-                                    {Math.abs(summary.growth.weightChange)} kg change
+                                    {/* {Math.abs(summary.growth.weightChange)} kg change */}
                                 </p>
                             </div>
                             <div className="bg-gray-50 rounded-lg p-4">
@@ -205,11 +229,11 @@ const MonthlySummary = () => {
                                     <span className="text-gray-600 flex items-center">
                                         <FaRuler className="mr-2" /> Height
                                     </span>
-                                    {getGrowthIndicator(summary.growth.heightChange)}
+                                    {/* {getGrowthIndicator(summary.growth.heightChange)} */}
                                 </div>
                                 <p className="text-2xl font-bold text-gray-800">{summary.growth.height} cm</p>
                                 <p className="text-sm text-gray-500">
-                                    {Math.abs(summary.growth.heightChange)} cm change
+                                    {/* {Math.abs(summary.growth.heightChange)} cm change */}
                                 </p>
                             </div>
                         </div>

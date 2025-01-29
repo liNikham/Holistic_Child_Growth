@@ -11,6 +11,7 @@ router.get('/getAllChildProfiles', verifyToken, childActivity.getAllChildProfile
 router.post('/addActivity', verifyToken, childActivity.addActivity);
 router.get('/getActivities/:childId', verifyToken, childActivity.getActivitiesByChildId);
 router.post('/performAnalysis', verifyToken, geminiService.generateAnalysis);
+router.get('/generateMonthlySummary', verifyToken, geminiService.generateMonthlySummary);
 
 // Add more routes as needed
 module.exports = router;
