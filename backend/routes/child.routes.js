@@ -3,7 +3,6 @@ const childActivity = require('../controllers/childActivity.controller'); // Imp
 const geminiService = require('../utils/geminiService');
 const { verifyToken } = require('../middleware/authMiddleware');
 const recommendationController = require('../controllers/recommendationController');
-const childController = require('../controllers/childController');
 // Route to create a child profile
 
 const router = express.Router();
@@ -16,7 +15,6 @@ router.post('/performAnalysis', verifyToken, geminiService.generateAnalysis);
 router.get('/generateMonthlySummary', verifyToken, childActivity.generateMonthlySummary);
 router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivitiesUsingGemini);
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
-router.get('/predictMilestones/:childId', verifyToken, childController.predictMilestones);
 
 // Add more routes as needed
 module.exports = router;
