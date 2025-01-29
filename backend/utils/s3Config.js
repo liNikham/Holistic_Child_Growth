@@ -1,4 +1,7 @@
 const {  S3Client,GetObjectCommand,PutObjectCommand } = require("@aws-sdk/client-s3");
+const natural = require('natural');
+const tokenizer = new natural.WordTokenizer();
+const TfIdf = natural.TfIdf;
 require('dotenv').config();
 
 const AWSClient = new S3Client({
@@ -65,4 +68,78 @@ function streamToString(stream) {
     });
 }
 
-module.exports = { uploadSummaryToS3 };
+async function searchJournalEntries(question, childId) {
+    const bucketName = process.env.AWS_BUCKET_NAME;
+    const key = `summaries/${childId}.json`;
+
+    try {
+        // Fetch journal entries
+        const getObjectParams = {
+            Bucket: bucketName,
+            Key: key,
+        };
+        const data = await AWSClient.send(new GetObjectCommand(getObjectParams));
+        if(!data.body){
+            return { success: true, found:false, message: "No journal entries found" };
+        }
+        const bodyContents = await streamToString(data.Body);
+        const journalEntries = JSON.parse(bodyContents);
+
+        // Prepare TF-IDF search
+        const tfidf = new TfIdf();
+
+        // Add all journal entries to the corpus
+        journalEntries.forEach((entry, index) => {
+            tfidf.addDocument(entry.summary.toLowerCase());
+            entry.index = index; // Add index for reference
+        });
+
+        // Process the question
+        const processedQuestion = question.toLowerCase();
+        
+        // Calculate similarity scores
+        const scores = [];
+        tfidf.tfidfs(processedQuestion, function(i, measure) {
+            scores.push({
+                index: i,
+                score: measure,
+                entry: journalEntries[i]
+            });
+        });
+
+        // Sort by relevance and get top 3 matches
+        const topMatches = scores
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3)
+            .filter(match => match.score > 0);
+
+        if (topMatches.length === 0) {
+            return {
+                success: true,
+                found: false,
+                message: "No relevant information found in the journal.",
+                answers: []
+            };
+        }
+
+        // Format the responses
+        const answers = topMatches.map(match => ({
+            text: match.entry.summary,
+            date: `${match.entry.month}/${match.entry.year}`,
+            relevanceScore: match.score.toFixed(2)
+        }));
+
+        return {
+            success: true,
+            found: true,
+            answers
+        };
+    } catch (error) {
+        console.error("Error searching journal entries:", error);
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+}
+module.exports = { uploadSummaryToS3,searchJournalEntries };

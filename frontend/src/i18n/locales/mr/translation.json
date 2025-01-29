@@ -1,0 +1,17 @@
+{
+    "common": {
+        "loading": "लोड करत आहे...",
+        "error": "त्रुटी आली"
+    },
+    "sidebar": {
+        "dashboard": "डॅशबोर्ड",
+        "addChild": "मूल जोडा",
+        "dailyEntry": "दैनंदिन नोंद",
+        "childJournal": "बाल दैनंदिनी",
+        "monthlySummary": "मासिक सारांश",
+        "journalQuery": "दैनंदिनी प्रश्न",
+        "parentQuery": "पालक प्रश्न",
+        "milestones": "विकासाचे टप्पे",
+        "smartInsights": "स्मार्ट अंतर्ज्ञान"
+    }
+}

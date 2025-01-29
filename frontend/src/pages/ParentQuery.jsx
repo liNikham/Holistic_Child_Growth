@@ -13,7 +13,11 @@ import {
     FaInfoCircle,
     FaLightbulb,
     FaBrain,
-    FaStar
+    FaStar,
+    FaMicrophone,
+    FaMicrophoneSlash,
+    FaGlobe,
+    FaCheck
 } from 'react-icons/fa';
 
 const ParentQuery = () => {
@@ -26,6 +30,9 @@ const ParentQuery = () => {
     const [savedQueries, setSavedQueries] = useState([]);
     const chatEndRef = useRef(null);
     const [showSuggestions, setShowSuggestions] = useState(true);
+    const [isListening, setIsListening] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const recognition = useRef(null);
 
     const suggestionQueries = [
         "What milestones should my child reach at their age?",
@@ -36,9 +43,35 @@ const ParentQuery = () => {
         "What are healthy meal options for my child?"
     ];
 
+    const languages = [
+        { code: 'en', name: 'English' },
+        { code: 'es', name: 'Español' },
+        { code: 'fr', name: 'Français' },
+        { code: 'de', name: 'Deutsch' },
+        { code: 'hi', name: 'हिंदी' },
+        { code: 'zh', name: '中文' }
+    ];
+
     useEffect(() => {
         fetchChildren();
         fetchSavedQueries();
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition.current = new webkitSpeechRecognition();
+            recognition.current.continuous = false;
+            recognition.current.lang = selectedLanguage;
+
+            recognition.current.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                setQuery(transcript);
+                setIsListening(false);
+            };
+
+            recognition.current.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                setIsListening(false);
+            };
+        }
     }, []);
 
     useEffect(() => {
@@ -73,6 +106,95 @@ const ParentQuery = () => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const toggleVoiceInput = () => {
+        if (isListening) {
+            recognition.current.stop();
+        } else {
+            recognition.current.start();
+        }
+        setIsListening(!isListening);
+    };
+
+    const formatResponse = (text) => {
+        // Split response into sections
+        const sections = text.split('\n\n');
+
+        return (
+            <div className="space-y-6">
+                {sections.map((section, index) => {
+                    // Handle headers (text between **)
+                    if (section.startsWith('**') && section.endsWith('**')) {
+                        return (
+                            <h2 key={index} className="text-xl font-bold text-blue-800 border-b border-blue-200 pb-2">
+                                {section.replace(/\*\*/g, '')}
+                            </h2>
+                        );
+                    }
+
+                    // Handle sub-headers
+                    if (section.startsWith('**')) {
+                        const [header, ...content] = section.split('\n');
+                        return (
+                            <div key={index} className="space-y-3">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {header.replace(/\*\*/g, '')}
+                                </h3>
+                                {content.length > 0 && (
+                                    <div className="pl-4">
+                                        {content.map((item, i) => {
+                                            if (item.trim().startsWith('*')) {
+                                                return (
+                                                    <div key={i} className="flex items-start space-x-2 mb-2">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                                        <p className="text-gray-700 flex-1">
+                                                            {item.replace(/^\*\s*/, '')}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <p key={i} className="text-gray-700">
+                                                    {item}
+                                                </p>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+
+                    // Handle bullet points
+                    if (section.includes('\n* ')) {
+                        const [intro, ...bullets] = section.split('\n* ');
+                        return (
+                            <div key={index} className="space-y-3">
+                                {intro && (
+                                    <p className="text-gray-700">{intro}</p>
+                                )}
+                                <div className="space-y-2 pl-4">
+                                    {bullets.map((bullet, i) => (
+                                        <div key={i} className="flex items-start space-x-2">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                            <p className="text-gray-700 flex-1">{bullet}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Regular paragraphs
+                    return (
+                        <p key={index} className="text-gray-700 leading-relaxed">
+                            {section}
+                        </p>
+                    );
+                })}
+            </div>
+        );
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!query.trim() || !selectedChild) return;
@@ -90,9 +212,11 @@ const ParentQuery = () => {
 
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.post('/api/parent-queries/ask', {
+            const response = await axios.post('/api/children/parent-queries/ask', {
                 childId: selectedChild,
-                query: newQuery.content
+                query: newQuery.content,
+                language: selectedLanguage,
+                childInfo: children.find(child => child._id === selectedChild)
             }, {
                 headers: { Authorization: `${token}` },
             });
@@ -108,7 +232,7 @@ const ParentQuery = () => {
             console.error('Error getting answer:', error);
             const errorMsg = {
                 type: 'error',
-                content: 'Sorry, I encountered an error. Please try again.',
+                content: error.response?.data?.message || 'Sorry, I encountered an error. Please try again.',
                 timestamp: new Date().toISOString()
             };
             setConversations(prev => [...prev, errorMsg]);
@@ -220,35 +344,21 @@ const ParentQuery = () => {
                             className={`flex ${msg.type === 'question' ? 'justify-end' : 'justify-start'} ${getMessageAnimationClass(msg.type)}`}
                         >
                             <div
-                                className={`max-w-3xl rounded-2xl p-4 ${msg.type === 'question'
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white ml-12 shadow-blue-200'
+                                className={`max-w-4xl rounded-2xl p-6 ${msg.type === 'question'
+                                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white ml-12'
                                     : msg.type === 'error'
-                                        ? 'bg-red-50 text-red-700 mr-12 border border-red-100'
-                                        : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-800 mr-12'
-                                    } shadow-lg`}
+                                        ? 'bg-red-50 text-red-700 mr-12'
+                                        : 'bg-white border border-gray-200 shadow-lg mr-12'
+                                    }`}
                             >
-                                <div className="flex items-start justify-between">
-                                    {msg.type !== 'question' && (
-                                        <div className="bg-white p-2 rounded-lg mb-2">
-                                            <FaRobot className="text-blue-600" />
-                                        </div>
-                                    )}
-                                    <p className="whitespace-pre-wrap px-2">{msg.content}</p>
-                                    {msg.type === 'question' && (
-                                        <button
-                                            onClick={() => toggleSaveQuery(msg.content)}
-                                            className="ml-4 text-white/80 hover:text-white transition-colors"
-                                        >
-                                            {isQuerySaved(msg.content) ? (
-                                                <FaBookmark className="transform hover:scale-110 transition-transform" />
-                                            ) : (
-                                                <FaRegBookmark className="transform hover:scale-110 transition-transform" />
-                                            )}
-                                        </button>
-                                    )}
-                                </div>
-                                <div className={`text-xs mt-2 px-2 ${msg.type === 'question' ? 'text-blue-200' : 'text-gray-500'
-                                    }`}>
+                                {msg.type === 'answer' ? (
+                                    <div className="prose max-w-none">
+                                        {formatResponse(msg.content)}
+                                    </div>
+                                ) : (
+                                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                                )}
+                                <div className="text-xs mt-4 text-gray-500 border-t border-gray-100 pt-2">
                                     {new Date(msg.timestamp).toLocaleTimeString()}
                                 </div>
                             </div>
@@ -265,24 +375,45 @@ const ParentQuery = () => {
                     <div ref={chatEndRef} />
                 </div>
 
-                {/* Enhanced Input Area */}
-                <div className="p-6 border-t border-gray-100 bg-white backdrop-blur-sm">
+                {/* Enhanced Input Area with Voice and Language Support */}
+                <div className="p-6 border-t border-gray-100 bg-white">
+                    <div className="flex items-center space-x-4 mb-4">
+                        <select
+                            value={selectedLanguage}
+                            onChange={(e) => setSelectedLanguage(e.target.value)}
+                            className="px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500"
+                        >
+                            {languages.map(lang => (
+                                <option key={lang.code} value={lang.code}>
+                                    {lang.name}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            onClick={toggleVoiceInput}
+                            className={`p-3 rounded-full ${isListening
+                                ? 'bg-red-100 text-red-600'
+                                : 'bg-gray-100 text-gray-600'
+                                } hover:bg-opacity-80`}
+                        >
+                            {isListening ? <FaMicrophoneSlash /> : <FaMicrophone />}
+                        </button>
+                    </div>
                     <form onSubmit={handleSubmit} className="flex space-x-4">
                         <input
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Type your question here..."
-                            className="flex-1 px-6 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                            disabled={!selectedChild}
+                            placeholder={`Type your question in ${languages.find(l => l.code === selectedLanguage).name}...`}
+                            className="flex-1 px-6 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500"
+                            disabled={!selectedChild || isListening}
                         />
                         <button
                             type="submit"
                             disabled={!query.trim() || !selectedChild || loading}
-                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
                         >
-                            <span>Send</span>
-                            <FaPaperPlane className="text-sm" />
+                            Send
                         </button>
                     </form>
                     {!selectedChild && (

@@ -35,7 +35,7 @@ const PrivateLayout = () => {
             />
             <div className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} overflow-auto`}>
                 <Navbar />
-                <div className="p-5">
+                <div className="p-5 ml-5">
                     <Outlet />
                 </div>
             </div>
