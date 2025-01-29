@@ -1,6 +1,7 @@
 const ChildProfile = require('../models/childProfile.model');
 const mongoose = require('mongoose');
 const geminiService = require('../utils/geminiService')
+const MonthlySummary = require('../models/monthlySummary.model')
 // Create a child profile linked to the logged-in parent
 
 exports.createChildProfile = async (req, res) => {
@@ -88,9 +89,19 @@ exports.generateMonthlySummary = async (req, res) => {
       return res.status(400).json({ error: "Child ID, month, and year are required." });
     }
 
-    const {summary , addedtos3} = await geminiService.generateMonthlySummary(req.query)
+    const {summary , addedToS3} = await geminiService.generateMonthlySummary(req.query)
+    if(addedToS3){
+      summaryBody = {
+        "month": month,
+        "year": year,
+        "ChildId":childId,
+        "summary": summary,
 
-
+      }
+      const addedSummary = await MonthlySummary.create(summaryBody)
+      
+    }
+    
     return res.status(200).json({ summary });
   } catch (error) {
     console.error("Error generating monthly summary:", error.response?.data || error.message);
