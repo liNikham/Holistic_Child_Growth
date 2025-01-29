@@ -18,6 +18,8 @@ import JournalQuery from "../pages/JournalQuery";
 import MonthlySummary from "../pages/MonthlySummary";
 import ChildJournal from "../pages/ChildJournal";
 import Milestones from "../pages/Milestones";
+import RecommendationsPage from '../pages/RecommendationsPage';
+import SmartInsightsPage from "../pages/SmartInsightsPage";
 
 const PrivateRoute = ({ children }) => {
     const { currentUser } = useSelector((state) => state.user);
@@ -53,6 +55,8 @@ const AppRouter = () => {
                     <Route path="/journal-query" element={<JournalQuery />} />
                     <Route path="/monthly-summary" element={<MonthlySummary />} />
                     <Route path="/child-journal" element={<ChildJournal />} />
+                    <Route path="/recommendations/:childId" element={<RecommendationsPage />} />
+                    <Route path="/smart-insights" element={<SmartInsightsPage />} />
                 </Route>
             </Routes>
         </Router>
