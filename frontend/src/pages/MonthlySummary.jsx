@@ -28,6 +28,7 @@ import {
     FaFileAlt
 } from 'react-icons/fa';
 import { FaSpinner } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
 
 const MonthlySummary = () => {
     const navigate = useNavigate();
@@ -37,6 +38,7 @@ const MonthlySummary = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [summary, setSummary] = useState(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         fetchChildren();
@@ -286,6 +288,7 @@ const MonthlySummary = () => {
 
     return (
         <div className="space-y-6">
+            <h1>{t('monthlySummary.title')}</h1>
             {/* Header */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
@@ -304,7 +307,7 @@ const MonthlySummary = () => {
                             onChange={(e) => setSelectedChild(e.target.value)}
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                            <option value="">Select a child</option>
+                            <option value="">{t('monthlySummary.selectChild')}</option>
                             {Array.isArray(children) && children.length > 0 ? (
                                 children.map((child) => (
                                     <option key={child._id} value={child._id}>
@@ -312,7 +315,7 @@ const MonthlySummary = () => {
                                     </option>
                                 ))
                             ) : (
-                                <option value="" disabled>No children found</option>
+                                <option value="" disabled>{t('monthlySummary.noChildrenFound')}</option>
                             )}
                         </select>
                         <button
@@ -321,7 +324,7 @@ const MonthlySummary = () => {
                             className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center space-x-2 disabled:opacity-50"
                         >
                             <FaDownload />
-                            <span>Export</span>
+                            <span>{t('monthlySummary.export')}</span>
                         </button>
                     </div>
                 </div>
@@ -374,11 +377,11 @@ const MonthlySummary = () => {
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-sm text-gray-600">Name</p>
+                                        <p className="text-sm text-gray-600">{t('monthlySummary.name')}</p>
                                         <p className="font-semibold text-gray-800">{getSelectedChild()?.name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Date of Birth</p>
+                                        <p className="text-sm text-gray-600">{t('monthlySummary.dateOfBirth')}</p>
                                         <p className="font-semibold text-gray-800">
                                             {new Date(getSelectedChild()?.dateOfBirth).toLocaleDateString()}
                                         </p>
@@ -456,7 +459,7 @@ const MonthlySummary = () => {
                             ))}
                             {getMonthlyActivities().length === 0 && (
                                 <div className="text-center py-8 text-gray-500">
-                                    No activities recorded for this month
+                                    {t('monthlySummary.noActivities')}
                                 </div>
                             )}
                         </div>
@@ -470,12 +473,12 @@ const MonthlySummary = () => {
                             ) : (
                                 <div className="text-center py-8 text-gray-500">
                                     <FaFileAlt className="mx-auto text-4xl mb-2 text-gray-400" />
-                                    <p>No summary available for this month</p>
+                                    <p>{t('monthlySummary.noSummaryAvailable')}</p>
                                     <button
                                         onClick={fetchMonthlySummary}
                                         className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
-                                        Generate Summary
+                                        {t('monthlySummary.generateSummary')}
                                     </button>
                                 </div>
                             )}
@@ -522,7 +525,7 @@ const MonthlySummary = () => {
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
                             >
                                 <FaSync className={loading ? 'animate-spin' : ''} />
-                                <span>Generate Summary</span>
+                                <span>{t('monthlySummary.generateSummary')}</span>
                             </button>
                         </h2>
                         <div className="space-y-6">
@@ -567,8 +570,8 @@ const MonthlySummary = () => {
                             {getMonthlyActivities().length === 0 && (
                                 <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
                                     <FaCalendarTimes className="mx-auto text-4xl mb-2 text-gray-400" />
-                                    <p>No activities recorded for this month</p>
-                                    <p className="text-sm mt-1">Start adding activities to track your child's development</p>
+                                    <p>{t('monthlySummary.noActivitiesRecorded')}</p>
+                                    <p className="text-sm mt-1">{t('monthlySummary.startAddingActivities')}</p>
                                 </div>
                             )}
                         </div>

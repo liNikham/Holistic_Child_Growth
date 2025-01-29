@@ -1,0 +1,22 @@
+{
+    "common": {
+        "loading": "लोड हो रहा है...",
+        "error": "त्रुटि हुई",
+        "save": "सहेजें",
+        "cancel": "रद्द करें",
+        "delete": "हटाएं",
+        "edit": "संपादित करें",
+        "submit": "जमा करें"
+    },
+    "sidebar": {
+        "dashboard": "डैशबोर्ड",
+        "addChild": "बच्चा जोड़ें",
+        "dailyEntry": "दैनिक प्रविष्टि",
+        "childJournal": "बाल डायरी",
+        "monthlySummary": "मासिक सारांश",
+        "journalQuery": "डायरी प्रश्न",
+        "parentQuery": "अभिभावक प्रश्न",
+        "milestones": "विकास के पड़ाव",
+        "smartInsights": "स्मार्ट अंतर्दृष्टि"
+    }
+}

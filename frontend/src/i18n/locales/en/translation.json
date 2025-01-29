@@ -1,0 +1,62 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "error": "Error occurred",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "submit": "Submit"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "activities": "Activities",
+        "reports": "Reports",
+        "settings": "Settings",
+        "logout": "Logout",
+        "profile": "Profile"
+    },
+    "childProfile": {
+        "title": "Child Profile",
+        "addChild": "Add Child",
+        "name": "Name",
+        "dateOfBirth": "Date of Birth",
+        "gender": "Gender",
+        "height": "Height",
+        "weight": "Weight"
+    },
+    "activities": {
+        "title": "Activities",
+        "addActivity": "Add Activity",
+        "duration": "Duration",
+        "date": "Date",
+        "category": "Category",
+        "notes": "Notes"
+    },
+    "monthlySummary": {
+        "title": "Monthly Summary",
+        "overview": "Overview",
+        "details": "Details",
+        "noActivities": "No activities recorded for this month",
+        "generateSummary": "Generate Summary",
+        "downloadReport": "Download Report"
+    },
+    "parentQuery": {
+        "askQuestion": "Ask a Question",
+        "selectChild": "Please select a child",
+        "typeQuestion": "Type your question here...",
+        "send": "Send",
+        "thinking": "Thinking..."
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "addChild": "Add Child",
+        "dailyEntry": "Daily Entry",
+        "childJournal": "Child Journal",
+        "monthlySummary": "Monthly Summary",
+        "journalQuery": "Journal Query",
+        "parentQuery": "Parent Query",
+        "milestones": "Milestones",
+        "smartInsights": "Smart Insights"
+    }
+}
