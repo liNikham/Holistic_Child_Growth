@@ -17,7 +17,14 @@ import {
     FaChevronRight,
     FaArrowUp,
     FaArrowDown,
-    FaMinus
+    FaMinus,
+    FaBrain,
+    FaChartBar,
+    FaListUl,
+    FaClock,
+    FaCalendarTimes,
+    FaSync,
+    FaCalendarDay
 } from 'react-icons/fa';
 
 const MonthlySummary = () => {
@@ -45,9 +52,18 @@ const MonthlySummary = () => {
             const response = await axios.get('/api/children/getAllChildProfiles', {
                 headers: { Authorization: `${token}` },
             });
-            setChildren(response.data);
+            console.log('Children response:', response);
+            if (Array.isArray(response.data)) {
+                setChildren(response.data);
+            } else if (Array.isArray(response.data.data)) {
+                setChildren(response.data.data);
+            } else {
+                console.error('Unexpected data format:', response.data);
+                setChildren([]);
+            }
         } catch (error) {
             console.error('Error fetching children:', error);
+            setChildren([]);
         }
     };
 
@@ -131,7 +147,40 @@ const MonthlySummary = () => {
         });
     };
     
-    
+    const getSelectedChild = () => {
+        return children.find(child => child._id === selectedChild);
+    };
+
+    const getMonthlyActivities = () => {
+        const child = getSelectedChild();
+        if (!child?.activities) return [];
+        
+        return child.activities.filter(activity => {
+            const activityDate = new Date(activity.date);
+            return activityDate.getMonth() + 1 === selectedMonth && 
+                   activityDate.getFullYear() === selectedYear;
+        });
+    };
+
+    const calculateTotalDuration = () => {
+        const activities = getMonthlyActivities();
+        return activities.reduce((total, activity) => total + activity.duration, 0);
+    };
+
+    const groupActivitiesByDate = () => {
+        const activities = getMonthlyActivities();
+        const grouped = {};
+        
+        activities.forEach(activity => {
+            const date = new Date(activity.date).toLocaleDateString();
+            if (!grouped[date]) {
+                grouped[date] = [];
+            }
+            grouped[date].push(activity);
+        });
+        
+        return grouped;
+    };
 
     return (
         <div className="">
@@ -154,11 +203,15 @@ const MonthlySummary = () => {
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="">Select a child</option>
-                            {children.map((child) => (
+                            {Array.isArray(children) && children.length > 0 ? (
+                                children.map((child) => (
                                 <option key={child._id} value={child._id}>
-                                    {child.name}
+                                    {child.name} ({new Date(child.dateOfBirth).toLocaleDateString()})
                                 </option>
-                            ))}
+                                ))
+                            ) : (
+                                <option value="" disabled>No children found</option>
+                            )}
                         </select>
                         <button
                             onClick={downloadSummary}
@@ -204,8 +257,31 @@ const MonthlySummary = () => {
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Select a Child</h3>
                     <p className="text-gray-500">Choose a child to view their monthly summary</p>
                 </div>
-            ) : summary ? (
+            ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Child Overview */}
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <FaChild className="mr-2" /> Child Overview
+                        </h2>
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Name</p>
+                                        <p className="font-semibold text-gray-800">{getSelectedChild()?.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600">Date of Birth</p>
+                                        <p className="font-semibold text-gray-800">
+                                            {new Date(getSelectedChild()?.dateOfBirth).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Growth Metrics */}
                     <div className="bg-white rounded-xl shadow-lg p-6">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -213,119 +289,184 @@ const MonthlySummary = () => {
                         </h2>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-gray-50 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-gray-600 flex items-center">
-                                        <FaWeight className="mr-2" /> Weight
-                                    </span>
-                                    {/* {getGrowthIndicator(summary.growth.weightChange)} */}
-                                </div>
-                                <p className="text-2xl font-bold text-gray-800">{summary.growth.weight} kg</p>
-                                <p className="text-sm text-gray-500">
-                                    {/* {Math.abs(summary.growth.weightChange)} kg change */}
-                                </p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-gray-600 flex items-center">
-                                        <FaRuler className="mr-2" /> Height
-                                    </span>
-                                    {/* {getGrowthIndicator(summary.growth.heightChange)} */}
-                                </div>
-                                <p className="text-2xl font-bold text-gray-800">{summary.growth.height} cm</p>
-                                <p className="text-sm text-gray-500">
-                                    {/* {Math.abs(summary.growth.heightChange)} cm change */}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Activity Summary */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <FaRunning className="mr-2" /> Activity Overview
-                        </h2>
-                        <div className="space-y-4">
-                            {summary.activities.map((activity, index) => (
-                                <div key={index} className="flex items-center justify-between">
-                                    <span className="text-gray-600">{activity.name}</span>
-                                    <div className="flex items-center">
-                                        <div className="w-48 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-blue-500 rounded-full"
-                                                style={{ width: `${activity.percentage}%` }}
-                                            ></div>
-                                        </div>
-                                        <span className="ml-2 text-sm text-gray-500">
-                                            {activity.count} times
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Health & Sleep */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <FaHeartbeat className="mr-2" /> Health & Sleep
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-gray-600 flex items-center">
-                                        <FaBed className="mr-2" /> Average Sleep
-                                    </span>
-                                </div>
+                                <span className="text-gray-600 flex items-center mb-2">
+                                    <FaWeight className="mr-2" /> Weight
+                                </span>
                                 <p className="text-2xl font-bold text-gray-800">
-                                    {summary.sleep.averageHours}h
+                                    {getSelectedChild()?.weight || 'N/A'} kg
                                 </p>
-                                <p className="text-sm text-gray-500">per night</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-600 mb-1">Earliest Bedtime</p>
-                                    <p className="font-semibold text-gray-800">
-                                        {summary.sleep.earliestBedtime}
-                                    </p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-600 mb-1">Latest Bedtime</p>
-                                    <p className="font-semibold text-gray-800">
-                                        {summary.sleep.latestBedtime}
-                                    </p>
-                                </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <span className="text-gray-600 flex items-center mb-2">
+                                    <FaRuler className="mr-2" /> Height
+                                </span>
+                                <p className="text-2xl font-bold text-gray-800">
+                                    {getSelectedChild()?.height || 'N/A'} cm
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Milestones & Achievements */}
-                    <div className="bg-white rounded-xl shadow-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <FaStar className="mr-2" /> Milestones & Achievements
+                    {/* Monthly Activity Summary */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <FaRunning className="mr-2" /> Monthly Activities
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                Total Duration: {calculateTotalDuration()} minutes
+                            </div>
                         </h2>
-                        <div className="space-y-4">
-                            {summary.milestones.map((milestone, index) => (
-                                <div
-                                    key={index}
-                                    className="bg-gray-50 rounded-lg p-4 flex items-start space-x-3"
-                                >
-                                    <div className="bg-yellow-100 p-2 rounded-lg">
-                                        <FaStar className="text-yellow-500" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-gray-800">{milestone.title}</p>
-                                        <p className="text-sm text-gray-600">{milestone.date}</p>
+                        <div className="space-y-6">
+                            {Object.entries(groupActivitiesByDate()).map(([date, activities]) => (
+                                <div key={date} className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="font-medium text-gray-700 mb-3">{date}</h3>
+                                    <div className="space-y-3">
+                                        {activities.map((activity) => (
+                                            <div 
+                                                key={activity._id} 
+                                                className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm"
+                                            >
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="bg-blue-100 p-2 rounded-lg">
+                                                        <FaRunning className="text-blue-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-gray-800">
+                                                            {activity.activity}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {new Date(activity.date).toLocaleTimeString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-sm font-medium text-gray-600">
+                                                    {activity.duration} min
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
+                            {getMonthlyActivities().length === 0 && (
+                                <div className="text-center py-8 text-gray-500">
+                                    No activities recorded for this month
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            ) : (
-                <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <FaChartLine className="mx-auto text-4xl text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Summary Available</h3>
-                    <p className="text-gray-500">No data available for the selected month</p>
+
+                    {/* AI Generated Summary */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <FaBrain className="mr-2" /> Development Summary
+                        </h2>
+                        {summary ? (
+                            <div className="prose max-w-none">
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <p className="text-gray-700 whitespace-pre-line">
+                                        {summary.summary}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-500">
+                                Click "Generate Summary" to get an AI-powered analysis of your child's activities
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Activity Statistics */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <FaChartBar className="mr-2" /> Activity Statistics
+                            </div>
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <h3 className="text-sm text-gray-600 mb-2">Total Activities</h3>
+                                <p className="text-2xl font-bold text-gray-800">
+                                    {getMonthlyActivities().length}
+                                </p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <h3 className="text-sm text-gray-600 mb-2">Total Duration</h3>
+                                <p className="text-2xl font-bold text-gray-800">
+                                    {calculateTotalDuration()} minutes
+                                </p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <h3 className="text-sm text-gray-600 mb-2">Active Days</h3>
+                                <p className="text-2xl font-bold text-gray-800">
+                                    {Object.keys(groupActivitiesByDate()).length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Detailed Activities List */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <FaListUl className="mr-2" /> Detailed Activities
+                            </div>
+                            <button
+                                onClick={fetchMonthlySummary}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                            >
+                                <FaSync className={loading ? 'animate-spin' : ''} />
+                                <span>Generate Summary</span>
+                            </button>
+                        </h2>
+                        <div className="space-y-6">
+                            {Object.entries(groupActivitiesByDate()).map(([date, activities]) => (
+                                <div key={date} className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="font-medium text-gray-700 mb-3 flex items-center">
+                                        <FaCalendarDay className="mr-2" />
+                                        {date}
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {activities.map((activity) => (
+                                            <div 
+                                                key={activity._id} 
+                                                className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="bg-blue-100 p-3 rounded-lg">
+                                                        <FaRunning className="text-blue-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-gray-800">
+                                                            {activity.activity}
+                                                        </p>
+                                                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                                            <FaClock className="text-gray-400" />
+                                                            <span>{new Date(activity.date).toLocaleTimeString()}</span>
+                                                            <span>•</span>
+                                                            <span>{activity.duration} minutes</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {activity.notes && (
+                                                    <p className="text-sm text-gray-600 mt-2">
+                                                        {activity.notes}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            {getMonthlyActivities().length === 0 && (
+                                <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                                    <FaCalendarTimes className="mx-auto text-4xl mb-2 text-gray-400" />
+                                    <p>No activities recorded for this month</p>
+                                    <p className="text-sm mt-1">Start adding activities to track your child's development</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
