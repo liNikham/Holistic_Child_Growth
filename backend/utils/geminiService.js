@@ -96,10 +96,9 @@ exports.generateMonthlySummary = async (reqBody) => {
             return { error: "Child not found." };
         }
 
-        const activities = child.activities.filter((activity) => (
+        const activities = child.activities.filter(activity =>
             new Date(activity.date) >= startDate && new Date(activity.date) <= endDate
-        ));
-        
+        );
         if (activities.length === 0) {
             return { error: "No activities found for this period." };
         }
