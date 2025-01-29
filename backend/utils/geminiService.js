@@ -130,10 +130,129 @@ exports.generateMonthlySummary = async (reqBody) => {
         const response = await retryRequest(config, 5, 1000);
         const generatedText = response.data.candidates[0].content.parts[0].text;
 
-        return res.status(200).json({ summary: generatedText.trim(), addToS3 });
+        return { summary: generatedText.trim(), addToS3 };
     } catch (error) {
         console.error("Error generating monthly summary:", error.response?.data || error.message);
         return res.status(500).json({ error: "Failed to generate monthly summary" });
     }
 };
+
+
+
+// Function to categorize activities using Gemini AI
+exports.categorizeActivitiesUsingGemini = async (req, res) => {
+    const { childId } = req.query; // Expect activities as an array of objects with description and duration
+
+    if (!childId ) {
+        return res.status(400).json({ error: "Child ID is required." });
+    }
+
+    try {
+        // Fetch the child's profile
+        const child = await ChildProfile.findById(childId);
+        if (!child) {
+            return res.status(404).json({ error: "Child not found." });
+        }
+        const activities = child.activities;
+
+        // Categories object to categorize activities
+        const categories = {
+            physical: [],
+            learning: [],
+            social: [],
+            creative: [],
+            emotional: [],
+            diet: [],
+            health: [],
+            chores: [],
+            screenTime: [],
+            dailyRoutine: []
+        };
+
+        // Function to categorize each activity using Gemini
+        const categorizeActivityWithGemini = async (activityDesc) => {
+            const prompt = `Categorize the following activity description into one of these categories: 'Physical', 'Learning', 'Social', 'Creative', 'Emotional', 'Diet', 'Health', 'Chores', 'Screen Time', 'Daily Routine'. Activity: "${activityDesc}"`;
+
+            const config = {
+                method: "post",
+                url: `https://api.gemini.com/v1/models/generate`, // Example endpoint, replace with actual Gemini endpoint
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.GEMINI_API_KEY}` // Assuming you use an API key
+                },
+                data: {
+                    input: prompt
+                }
+            };
+
+            try {
+                const response = await axios(config);
+                const category = response.data.category; // Assuming response contains category information
+                return category;
+            } catch (error) {
+                console.error("Error categorizing activity with Gemini:", error);
+                throw new Error("Failed to categorize activity");
+            }
+        };
+
+        // Loop through each activity, categorize, and store in categories
+        for (const activity of activities) {
+            if (!activity.description || !activity.duration) {
+                console.log("Activity missing description or duration:", activity);
+                continue;
+            }
+
+            const category = await categorizeActivityWithGemini(activity.description);
+
+            // Push the activity into the appropriate category with the duration included
+            const activityWithDuration = { 
+                description: activity.description, 
+                duration: activity.duration
+            };
+
+            switch (category) {
+                case 'Physical':
+                    categories.physical.push(activityWithDuration);
+                    break;
+                case 'Learning':
+                    categories.learning.push(activityWithDuration);
+                    break;
+                case 'Social':
+                    categories.social.push(activityWithDuration);
+                    break;
+                case 'Creative':
+                    categories.creative.push(activityWithDuration);
+                    break;
+                case 'Emotional':
+                    categories.emotional.push(activityWithDuration);
+                    break;
+                case 'Diet':
+                    categories.diet.push(activityWithDuration);
+                    break;
+                case 'Health':
+                    categories.health.push(activityWithDuration);
+                    break;
+                case 'Chores':
+                    categories.chores.push(activityWithDuration);
+                    break;
+                case 'Screen Time':
+                    categories.screenTime.push(activityWithDuration);
+                    break;
+                case 'Daily Routine':
+                    categories.dailyRoutine.push(activityWithDuration);
+                    break;
+                default:
+                    console.log(`Uncategorized activity: ${activity.description}`);
+            }
+        }
+
+        // Return the categorized activities with duration
+        return res.status(200).json({ categories });
+
+    } catch (error) {
+        console.error("Error categorizing activities:", error.message);
+        return res.status(500).json({ error: "Failed to categorize activities" });
+    }
+};
+
 
