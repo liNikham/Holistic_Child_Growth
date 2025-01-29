@@ -129,17 +129,17 @@ exports.generateMonthlySummary = async (req, res) => {
     }
 
     const {summary , addedToS3} = await geminiService.generateMonthlySummary(req.query)
-    if(addedToS3){
-      summaryBody = {
-        "month": month,
-        "year": year,
-        "ChildId":childId,
-        "summary": summary,
+    // if(addedToS3){
+    //   summaryBody = {
+    //     "month": month,
+    //     "year": year,
+    //     "ChildId":childId,
+    //     "summary": summary,
 
-      }
-      const addedSummary = await MonthlySummary.create(summaryBody)
+    //   }
+    //   const addedSummary = await MonthlySummary.create(summaryBody)
       
-    }
+    // }
     
     return res.status(200).json({ summary });
   } catch (error) {
