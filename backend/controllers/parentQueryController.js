@@ -10,7 +10,7 @@ exports.askQuestion = async (req, res) => {
 
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        // Construct a detailed prompt with child's context
+        // Construct prompt with language specification
         const prompt = `
         As a child development expert, please answer this question about child development: "${query}"
         
@@ -25,7 +25,7 @@ exports.askQuestion = async (req, res) => {
         3. Includes actionable recommendations
         4. Is formatted with clear sections using markdown
         
-        Respond in ${language} language.
+        Important: Provide the response in ${language} language.
         `;
 
         const result = await model.generateContent(prompt);

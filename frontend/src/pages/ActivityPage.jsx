@@ -51,7 +51,7 @@ const ActivityPage = () => {
 
       // Update the activities state with the new activity
       setActivities(prevActivities => [...prevActivities, response.data.activity]);
-      
+
       return response.data;
     } catch (error) {
       console.error('Error adding activity:', error);
@@ -64,16 +64,16 @@ const ActivityPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="">
       <button
         onClick={() => navigate('/dashboard')}
         className="bg-blue-600 text-white px-4 py-2 rounded-lg mb-4"
       >
         Back to Dashboard
       </button>
-      <h1 className="text-2xl font-bold mb-4">{childName}'s Activity Calendar</h1>
-      <ActivityCalendar 
-        activities={activities} 
+      <h1 className="text-2xl font-bold mb-4">{childName}Activity's Calendar</h1>
+      <ActivityCalendar
+        activities={activities}
         onAddActivity={onAddActivity}
         childId={childId} // Pass childId to calendar
       />

@@ -85,6 +85,8 @@ const MonthlySummary = () => {
                     year: selectedYear
                 }
             });
+
+            console.log("response", response);
             console.log(response.data.summary);
             setSummary(response.data);
         } catch (error) {

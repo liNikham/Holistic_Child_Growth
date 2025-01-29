@@ -1,4 +1,4 @@
-const {  S3Client,GetObjectCommand,PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
@@ -69,6 +69,7 @@ function streamToString(stream) {
 }
 
 async function searchJournalEntries(question, childId) {
+    console.log(question, childId);
     const bucketName = process.env.AWS_BUCKET_NAME;
     const key = `summaries/${childId}.json`;
 
@@ -79,9 +80,9 @@ async function searchJournalEntries(question, childId) {
             Key: key,
         };
         const data = await AWSClient.send(new GetObjectCommand(getObjectParams));
-        if(!data.body){
-            return { success: true, found:false, message: "No journal entries found" };
-        }
+        // if (!data.body) {
+        //     return { success: true, found: false, message: "No journal entries found" };
+        // }
         const bodyContents = await streamToString(data.Body);
         const journalEntries = JSON.parse(bodyContents);
 
@@ -96,10 +97,10 @@ async function searchJournalEntries(question, childId) {
 
         // Process the question
         const processedQuestion = question.toLowerCase();
-        
+
         // Calculate similarity scores
         const scores = [];
-        tfidf.tfidfs(processedQuestion, function(i, measure) {
+        tfidf.tfidfs(processedQuestion, function (i, measure) {
             scores.push({
                 index: i,
                 score: measure,
@@ -132,7 +133,8 @@ async function searchJournalEntries(question, childId) {
         return {
             success: true,
             found: true,
-            answers
+            answers,
+            link: process.env.AWS_S3_ENDPOINT + '/' + key
         };
     } catch (error) {
         console.error("Error searching journal entries:", error);
@@ -142,4 +144,4 @@ async function searchJournalEntries(question, childId) {
         };
     }
 }
-module.exports = { uploadSummaryToS3,searchJournalEntries };
+module.exports = { uploadSummaryToS3, searchJournalEntries };

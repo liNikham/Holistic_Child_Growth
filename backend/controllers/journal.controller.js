@@ -1,9 +1,9 @@
 const { searchJournalEntries } = require('../utils/s3Config')
 
-exports.queryToJournal=async(req, res)=> {
+exports.queryToJournal = async (req, res) => {
     try {
         const { question, childId } = req.body;
-
+        console.log(question, childId);
         if (!question || !childId) {
             return res.status(400).json({
                 success: false,
@@ -11,13 +11,14 @@ exports.queryToJournal=async(req, res)=> {
             });
         }
         const result = await searchJournalEntries(question, childId);
-        if(!result.success){
+        console.log(result);
+        if (!result.success) {
             return res.status(404).json({
                 success: false,
                 error: result.message
             })
         }
-        if(!result.found){
+        if (!result.found) {
             return res.status(404).json({
                 success: false,
                 error: result.message

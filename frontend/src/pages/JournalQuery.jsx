@@ -16,7 +16,8 @@ import {
     FaChevronDown,
     FaChevronUp,
     FaClock,
-    FaDownload
+    FaDownload,
+    FaSpinner
 } from 'react-icons/fa';
 
 const JournalQuery = () => {
@@ -35,6 +36,8 @@ const JournalQuery = () => {
         milestones: false
     });
     const [showFilters, setShowFilters] = useState(false);
+    const [queryResponses, setQueryResponses] = useState([]);
+    const [selectedResponse, setSelectedResponse] = useState(null);
 
     useEffect(() => {
         fetchChildren();
@@ -43,6 +46,7 @@ const JournalQuery = () => {
     useEffect(() => {
         if (selectedChild) {
             fetchJournalEntries();
+            fetchJournalQuery();
         }
     }, [selectedChild, dateRange, filters]);
 
@@ -74,6 +78,31 @@ const JournalQuery = () => {
             setEntries(response.data);
         } catch (error) {
             console.error('Error fetching journal entries:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchJournalQuery = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('authToken');
+            const response = await axios.post('/api/journal/query', {
+                childId: selectedChild,
+                question: "What activities did my child do last month?"
+            }, {
+                headers: {
+                    Authorization: `${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data.success && response.data.answers) {
+                setQueryResponses(response.data.answers);
+                setSelectedResponse(response.data.answers[0]); // Select first response by default
+            }
+        } catch (error) {
+            console.error('Error fetching journal query:', error);
         } finally {
             setLoading(false);
         }
@@ -127,8 +156,69 @@ const JournalQuery = () => {
         }
     };
 
+    const formatResponse = (text) => {
+        if (!text) return null;
+
+        // Split response into sections
+        const sections = text.split('\n\n');
+
+        return (
+            <div className="space-y-6">
+                {sections.map((section, index) => {
+                    // Handle main headers (text between **)
+                    if (section.startsWith('**') && section.endsWith('**')) {
+                        return (
+                            <h2 key={index} className="text-xl font-bold text-blue-800 border-b border-blue-200 pb-2">
+                                {section.replace(/\*\*/g, '').replace('[Child\'s Name]', selectedChild?.name || '')}
+                            </h2>
+                        );
+                    }
+
+                    // Handle sub-headers with bullet points
+                    if (section.startsWith('**')) {
+                        const [header, ...content] = section.split('\n');
+                        return (
+                            <div key={index} className="space-y-3">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {header.replace(/\*\*/g, '')}
+                                </h3>
+                                <div className="pl-4">
+                                    {content.map((item, i) => {
+                                        if (item.trim().startsWith('*')) {
+                                            return (
+                                                <div key={i} className="flex items-start space-x-2 mb-2">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                                                    <p className="text-gray-700 flex-1">
+                                                        {item.replace(/^\*\s*/, '')
+                                                            .replace('[Child\'s Name]', selectedChild?.name || '')}
+                                                    </p>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <p key={i} className="text-gray-700">
+                                                {item.replace('[Child\'s Name]', selectedChild?.name || '')}
+                                            </p>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Regular paragraphs
+                    return (
+                        <p key={index} className="text-gray-700 leading-relaxed">
+                            {section.replace('[Child\'s Name]', selectedChild?.name || '')}
+                        </p>
+                    );
+                })}
+            </div>
+        );
+    };
+
     return (
-        <div className="">
+        <div className="space-y-6">
             {/* Header */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
@@ -234,55 +324,63 @@ const JournalQuery = () => {
                 </div>
             </div>
 
-            {/* Journal Entries Timeline */}
-            <div className="space-y-6">
-                {loading ? (
-                    <div className="flex justify-center items-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-                    </div>
-                ) : entries.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                        <FaBook className="mx-auto text-4xl text-gray-400 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">No Journal Entries Found</h3>
-                        <p className="text-gray-500">Try adjusting your search criteria or filters</p>
-                    </div>
-                ) : (
-                    entries.map((entry, index) => (
-                        <div
-                            key={index}
-                            className="bg-white rounded-xl shadow-lg p-6 transform transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
-                        >
-                            <div className="flex items-start space-x-4">
-                                <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-3 rounded-lg">
-                                    {getEntryIcon(entry.category)}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-lg font-semibold text-gray-800">
-                                            {entry.title}
-                                        </h3>
-                                        <div className="flex items-center text-sm text-gray-500">
-                                            <FaClock className="mr-1" />
-                                            {new Date(entry.date).toLocaleDateString()}
+            {/* Loading State */}
+            {loading ? (
+                <div className="flex justify-center items-center h-64">
+                    <FaSpinner className="animate-spin text-4xl text-blue-600" />
+                </div>
+            ) : (
+                <>
+                    {/* Query Results */}
+                    {queryResponses.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            {/* Response List */}
+                            <div className="md:col-span-1 space-y-4">
+                                {queryResponses.map((response, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => setSelectedResponse(response)}
+                                        className={`p-4 rounded-lg cursor-pointer transition-all ${selectedResponse === response
+                                            ? 'bg-blue-50 border-2 border-blue-500'
+                                            : 'bg-white border border-gray-200 hover:border-blue-300'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-600">
+                                                Response {index + 1}
+                                            </span>
+                                            <div className="flex items-center text-yellow-500">
+                                                <FaStar />
+                                                <span className="ml-1 text-sm">
+                                                    {parseFloat(response.relevanceScore).toFixed(1)}
+                                                </span>
+                                            </div>
                                         </div>
+                                        <p className="text-sm text-gray-500">
+                                            Date: {response.date}
+                                        </p>
                                     </div>
-                                    <p className="text-gray-600 mb-4">{entry.content}</p>
-                                    {entry.metrics && (
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg">
-                                            {Object.entries(entry.metrics).map(([key, value]) => (
-                                                <div key={key} className="text-center">
-                                                    <p className="text-sm text-gray-500 capitalize">{key}</p>
-                                                    <p className="font-semibold text-gray-700">{value}</p>
-                                                </div>
-                                            ))}
+                                ))}
+                            </div>
+
+                            {/* Selected Response Content */}
+                            <div className="md:col-span-3">
+                                <div className="bg-white rounded-xl shadow-lg p-6">
+                                    {selectedResponse ? (
+                                        <div className="prose max-w-none">
+                                            {formatResponse(selectedResponse.text)}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-gray-500">
+                                            Select a response to view details
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
+                    )}
+                </>
+            )}
         </div>
     );
 };

@@ -133,21 +133,21 @@ exports.generateMonthlySummary = async (req, res) => {
       return res.status(400).json({ error });
     }
 
-    if (addedToS3) {
+    if (!addedToS3) {
       summaryBody = {
         "month": month,
         "year": year,
         "childId": childId,
         "summary": summary,
       }
-      const {success, url} = await uploadSummaryToS3(summary, childId, month, year);
+      const { success, url } = await uploadSummaryToS3(summary, childId, month, year);
       if (!success) {
         return res.status(500).json({ error: "Failed to upload summary to S3" });
       }
       await ChildJournal.findOneAndUpdate(
-        { childId }, 
-        { $set: { document: url } },  
-        { upsert: true, new: true }  
+        { childId },
+        { $set: { document: url } },
+        { upsert: true, new: true }
       );
       const addedSummary = new MonthlySummary(summaryBody)
       await addedSummary.save();
