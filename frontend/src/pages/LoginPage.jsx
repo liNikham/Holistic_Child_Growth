@@ -18,6 +18,7 @@ const LoginPage = () => {
             const response = await axios.post('/api/users/login', { email, password });
             const { token, user } = response.data;
             localStorage.setItem('authToken', token);
+            localStorage.setItem('user', JSON.stringify(user)); 
             dispatch(signInSuccess(user));
             navigate('/dashboard');
         } catch (err) {
