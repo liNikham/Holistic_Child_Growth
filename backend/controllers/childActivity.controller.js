@@ -6,9 +6,9 @@ const MonthlySummary = require('../models/monthlySummary.model')
 
 exports.createChildProfile = async (req, res) => {
   try {
-    const { name, dateOfBirth, gender ,height,weight} = req.body;
+    const { name, dateOfBirth, gender, height, weight } = req.body;
     const parentId = req.user; // Extracted from the logged-in parent's token
-    const childProfile = new ChildProfile({ name, dateOfBirth, gender, parentId,height,weight });
+    const childProfile = new ChildProfile({ name, dateOfBirth, gender, parentId, height, weight });
 
     const savedChild = await childProfile.save().catch((error) => {
       console.error("Save failed:", error);
@@ -39,7 +39,7 @@ exports.addActivity = async (req, res) => {
     // Validate required fields
     if (!childId || !activity || !duration || !date) {
       console.log('Missing required fields:', { childId, activity, duration, date });
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Missing required fields: childId, activity, duration, and date are required',
         received: { childId, activity, duration, date }
       });
@@ -50,9 +50,9 @@ exports.addActivity = async (req, res) => {
     console.log('Found child profile:', childProfile ? 'yes' : 'no');
 
     if (!childProfile) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         message: 'Child profile not found',
-        childId 
+        childId
       });
     }
 
@@ -70,7 +70,7 @@ exports.addActivity = async (req, res) => {
     const updatedChild = await ChildProfile.findByIdAndUpdate(
       childId,
       { $push: { activities: newActivity } },
-      { 
+      {
         new: true,
         runValidators: false
       }
@@ -84,14 +84,14 @@ exports.addActivity = async (req, res) => {
     }
 
     // Return the newly added activity
-    res.status(201).json({ 
-      message: 'Activity added successfully', 
+    res.status(201).json({
+      message: 'Activity added successfully',
       activity: newActivity
     });
   } catch (error) {
     console.error('Error adding activity:', error);
-    res.status(500).json({ 
-      message: 'Error adding activity', 
+    res.status(500).json({
+      message: 'Error adding activity',
       error: error.message,
       stack: error.stack
     });
@@ -128,19 +128,27 @@ exports.generateMonthlySummary = async (req, res) => {
       return res.status(400).json({ error: "Child ID, month, and year are required." });
     }
 
-    const {summary , addedToS3} = await geminiService.generateMonthlySummary(req.query)
-    // if(addedToS3){
-    //   summaryBody = {
-    //     "month": month,
-    //     "year": year,
-    //     "ChildId":childId,
-    //     "summary": summary,
+    const { summary, addedToS3, error } = await geminiService.generateMonthlySummary(req.query)
+    if (error) {
+      return res.status(400).json({ error });
+    }
 
-    //   }
-    //   const addedSummary = await MonthlySummary.create(summaryBody)
-      
-    // }
-    
+    if (addedToS3) {
+      summaryBody = {
+        "month": month,
+        "year": year,
+        "ChildId": childId,
+        "summary": summary,
+
+      }
+      const addedSummary = await MonthlySummary.create(summaryBody)
+      addedSummary.save()
+      const uploadResult = await uploadSummaryToS3(summary, childId, month, year);
+      if (!uploadResult.success) {
+        return res.status(500).json({ error: "Failed to upload summary to S3" });
+      }
+    }
+
     return res.status(200).json({ summary });
   } catch (error) {
     console.error("Error generating monthly summary:", error.response?.data || error.message);
