@@ -13,6 +13,7 @@ const AWSClient = new S3Client({
 });
 
 async function uploadSummaryToS3(summary, childId, month, year) {
+    const region = process.env.AWS_REGION;
     const bucketName = process.env.AWS_BUCKET_NAME;
     const key = `summaries/${childId}.json`;
 
@@ -49,8 +50,8 @@ async function uploadSummaryToS3(summary, childId, month, year) {
             ContentType: 'application/json',
         };
         await AWSClient.send(new PutObjectCommand(uploadParams));
-        
-        return { success: true };
+        const s3Url = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+        return { success: true, url: s3Url };
     } catch (error) {
         console.error("Error uploading summary to S3:", error);
         return { success: false, error };

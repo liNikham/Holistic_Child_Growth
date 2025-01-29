@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaBell, FaUserCircle, FaSignOutAlt, FaCog } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import LanguageSelector from './LanguageSelector';
 
 const PrivateNavbar = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -58,6 +59,7 @@ const PrivateNavbar = () => {
                 </div>
 
                 <div className="flex items-center space-x-4">
+                    <LanguageSelector />
                     {/* Notifications */}
                     <button
                         className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full"

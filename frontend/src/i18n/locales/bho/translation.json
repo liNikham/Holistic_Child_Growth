@@ -1,0 +1,17 @@
+{
+    "common": {
+        "loading": "लोड हो रहल बा...",
+        "error": "गलती भइल"
+    },
+    "sidebar": {
+        "dashboard": "डैशबोर्ड",
+        "addChild": "बच्चा जोड़ीं",
+        "dailyEntry": "रोज के एंट्री",
+        "childJournal": "बच्चा के डायरी",
+        "monthlySummary": "महीना के सारांश",
+        "journalQuery": "डायरी सवाल",
+        "parentQuery": "माई-बाप के सवाल",
+        "milestones": "विकास के पड़ाव",
+        "smartInsights": "स्मार्ट जानकारी"
+    }
+}

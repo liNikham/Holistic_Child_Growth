@@ -5,6 +5,8 @@ import { PersistGate } from "redux-persist/integration/react"; // Import Persist
 import { persistStore } from "redux-persist"; // Import persistStore
 import { store } from "./store"; // Your store file
 import { signInSuccess } from "./features/userSlice";
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n/config';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -18,9 +20,11 @@ const App = () => {
   }, [dispatch]);
 
   return (
-    <PersistGate loading={null} persistor={persistor}> {/* Wrap AppRouter with PersistGate */}
-      <AppRouter />
-    </PersistGate>
+    <I18nextProvider i18n={i18n}>
+      <PersistGate loading={null} persistor={persistor}> {/* Wrap AppRouter with PersistGate */}
+        <AppRouter />
+      </PersistGate>
+    </I18nextProvider>
   );
 };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Calendar from 'react-calendar'; 
+import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { FaRunning, FaClock, FaPlus } from 'react-icons/fa';
 
@@ -9,7 +9,21 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
   const [newActivity, setNewActivity] = useState({ activity: '', duration: '' });
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Add function to check if date is in the future
+  const isFutureDate = (date) => {
+    return new Date(date) > new Date(new Date().setHours(23, 59, 59, 999));
+  };
+
+  // Custom tile disabling for Calendar
+  const tileDisabled = ({ date }) => {
+    return isFutureDate(date);
+  };
+
+  // Update handleDateChange to prevent future dates
   const handleDateChange = (date) => {
+    if (isFutureDate(date)) {
+      return;
+    }
     setSelectedDate(date);
     // Filter activities by the selected date
     const filteredActivities = activities.filter(
@@ -22,7 +36,7 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
     if (newActivity.activity && newActivity.duration) {
       try {
         const response = await onAddActivity(selectedDate, newActivity);
-        
+
         // Create a new activity object with the response data
         const addedActivity = {
           ...response.activity,
@@ -31,7 +45,7 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
 
         // Update the local modalData state with the new activity
         setModalData(prevData => [...prevData, addedActivity]);
-        
+
         // Clear form
         setNewActivity({ activity: '', duration: '' });
         setShowAddForm(false);
@@ -92,6 +106,8 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
         onChange={handleDateChange}
         value={selectedDate}
         tileContent={getTileContent}
+        tileDisabled={tileDisabled}
+        maxDate={new Date()}
         className="mb-4"
       />
 
@@ -136,7 +152,7 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
                   <span>Add Activity</span>
                 </button>
               </div>
-              
+
               {modalData.length > 0 ? (
                 <div className="space-y-3">
                   {modalData.map((activity, index) => (

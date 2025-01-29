@@ -8,5 +8,5 @@ const childDocumentSchema = new mongoose.Schema({
     timestamps: true
 })
 
-module.exports = mongoose.model('ChildDocument', childDocumentSchema);
+module.exports = mongoose.model('ChildJournal', childDocumentSchema);
 

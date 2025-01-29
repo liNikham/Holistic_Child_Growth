@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const geminiService = require('../utils/geminiService')
 const MonthlySummary = require('../models/monthlySummary.model')
 const { uploadSummaryToS3 } = require('../utils/s3Config')
+const ChildJournal = require('../models/childJournal.model');
 // Create a child profile linked to the logged-in parent
 
 exports.createChildProfile = async (req, res) => {
@@ -139,10 +140,15 @@ exports.generateMonthlySummary = async (req, res) => {
         "childId": childId,
         "summary": summary,
       }
-      const uploadResult = await uploadSummaryToS3(summary, childId, month, year);
-      if (!uploadResult.success) {
+      const {success, url} = await uploadSummaryToS3(summary, childId, month, year);
+      if (!success) {
         return res.status(500).json({ error: "Failed to upload summary to S3" });
       }
+      await ChildJournal.findOneAndUpdate(
+        { childId }, 
+        { $set: { document: url } },  
+        { upsert: true, new: true }  
+      );
       const addedSummary = new MonthlySummary(summaryBody)
       await addedSummary.save();
     }
