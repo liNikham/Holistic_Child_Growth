@@ -75,26 +75,28 @@ exports.generateAnalysis = async (req, res) => {
         console.error("Error generating analysis:", error.response?.data || error.message);
         return res.status(500).json({ error: "Failed to fetch analysis" });
     }
-}; 
+};
 
-exports.generateMonthlySummary = async (req, res) => {
-    const { childId, month, year } = req.query;
-    
-    if (!childId || !month || !year) {
-        return res.status(400).json({ error: "Child ID, month, and year are required." });
-    }
+exports.generateMonthlySummary = async (reqBody) => {
 
     try {
+        const { childId, month, year } = reqBody;
+
+        if (!childId || !month || !year) {
+            return res.status(400).json({ error: "Child ID, month, and year are required." });
+        }
+        const currentMonth = new Date().getMonth() + 1; // getMonth() returns 0-11, so add 1
+        const addToS3 = currentMonth > parseInt(month) ? true : false;
         // Fetch activities from MongoDB
         const startDate = new Date(`${year}-${month}-01`);
         const endDate = new Date(`${year}-${month}-31`);
-        
+
         const child = await ChildProfile.findById(childId);
         if (!child) {
             return res.status(404).json({ error: "Child not found." });
         }
 
-        const activities = child.activities.filter(activity => 
+        const activities = child.activities.filter(activity =>
             new Date(activity.date) >= startDate && new Date(activity.date) <= endDate
         );
 
@@ -109,7 +111,6 @@ exports.generateMonthlySummary = async (req, res) => {
         - Progress and achievements
         - Strengths observed
         - Areas for improvement
-        - Recommendations for further development
         - Overall development trends`;
 
         const config = {
@@ -126,11 +127,10 @@ exports.generateMonthlySummary = async (req, res) => {
                 ]
             }
         };
-
         const response = await retryRequest(config, 5, 1000);
         const generatedText = response.data.candidates[0].content.parts[0].text;
 
-        return res.status(200).json({ summary: generatedText.trim() });
+        return res.status(200).json({ summary: generatedText.trim(), addToS3 });
     } catch (error) {
         console.error("Error generating monthly summary:", error.response?.data || error.message);
         return res.status(500).json({ error: "Failed to generate monthly summary" });

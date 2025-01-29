@@ -1,5 +1,6 @@
 const ChildProfile = require('../models/childProfile.model');
 const mongoose = require('mongoose');
+const geminiService = require('../utils/geminiService')
 // Create a child profile linked to the logged-in parent
 
 exports.createChildProfile = async (req, res) => {
@@ -75,5 +76,24 @@ exports.getActivitiesByChildId = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching activities', error: error.message });
+  }
+};
+
+// genrates monthly summary and add to child Journal
+exports.generateMonthlySummary = async (req, res) => {
+  try {
+    const { childId, month, year } = req.query;
+
+    if (!childId || !month || !year) {
+      return res.status(400).json({ error: "Child ID, month, and year are required." });
+    }
+
+    const {summary , addedtos3} = await geminiService.generateMonthlySummary(req.query)
+
+
+    return res.status(200).json({ summary });
+  } catch (error) {
+    console.error("Error generating monthly summary:", error.response?.data || error.message);
+    return res.status(500).json({ error: "Failed to generate monthly summary" });
   }
 };
