@@ -1,29 +1,46 @@
 import React, { useState } from 'react';
 import Calendar from 'react-calendar'; 
 import 'react-calendar/dist/Calendar.css';
+import { FaRunning, FaClock, FaPlus } from 'react-icons/fa';
 
 const ActivityCalendar = ({ activities, onAddActivity }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [modalData, setModalData] = useState([]);
   const [newActivity, setNewActivity] = useState({ activity: '', duration: '' });
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-
     // Filter activities by the selected date
     const filteredActivities = activities.filter(
       (activity) => new Date(activity.date).toDateString() === date.toDateString()
     );
-
     setModalData(filteredActivities);
   };
+
   const handleAddActivity = async () => {
     if (newActivity.activity && newActivity.duration) {
-      console.log(newActivity);
-      // Call the parent function to add the activity
-      await onAddActivity(selectedDate, newActivity);
-      setNewActivity({ activity: '', duration: '' });
-      setSelectedDate(null); // Close modal after adding
+      try {
+        const response = await onAddActivity(selectedDate, newActivity);
+        
+        // Create a new activity object with the response data
+        const addedActivity = {
+          ...response.activity,
+          _id: response.activity._id || Date.now() // Use response ID or temporary ID
+        };
+
+        // Update the local modalData state with the new activity
+        setModalData(prevData => [...prevData, addedActivity]);
+        
+        // Clear form
+        setNewActivity({ activity: '', duration: '' });
+        setShowAddForm(false);
+      } catch (error) {
+        console.error('Error adding activity:', error);
+        alert(error.message || 'Error adding activity');
+      }
+    } else {
+      alert('Please fill in both activity and duration');
     }
   };
 
@@ -78,19 +95,24 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
         className="mb-4"
       />
 
-      {/* Activity Details Modal */}
+      {/* Modal */}
       {selectedDate && (
         <div
           className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50"
           onClick={() => setSelectedDate(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg"
+            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">
-                Add Activity on {selectedDate.toLocaleDateString('en-US')}
+                Activities on {selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
               </h3>
               <button
                 onClick={() => setSelectedDate(null)}
@@ -102,38 +124,84 @@ const ActivityCalendar = ({ activities, onAddActivity }) => {
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Activity</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                  value={newActivity.activity}
-                  onChange={(e) =>
-                    setNewActivity({ ...newActivity, activity: e.target.value })
-                  }
-                  placeholder="Enter activity"
-                />
+            {/* Existing Activities */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-semibold text-gray-700">Today's Activities</h4>
+                <button
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+                >
+                  <FaPlus className="text-sm" />
+                  <span>Add Activity</span>
+                </button>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Duration</label>
-                <input
-                  type="number"
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
-                  value={newActivity.duration}
-                  onChange={(e) =>
-                    setNewActivity({ ...newActivity, duration: e.target.value })
-                  }
-                  placeholder="Enter duration in minutes"
-                />
-              </div>
-              <button
-                className="mt-4 text-white bg-blue-500 hover:bg-blue-600 rounded-md px-4 py-2"
-                onClick={handleAddActivity}
-              >
-                Add Activity
-              </button>
+              
+              {modalData.length > 0 ? (
+                <div className="space-y-3">
+                  {modalData.map((activity, index) => (
+                    <div
+                      key={activity._id || index}
+                      className="bg-gray-50 p-4 rounded-lg flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-blue-100 p-2 rounded-full">
+                          <FaRunning className="text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">{activity.activity}</p>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <FaClock className="mr-1" />
+                            <span>{activity.duration} minutes</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No activities recorded for this date</p>
+              )}
             </div>
+
+            {/* Add Activity Form */}
+            {showAddForm && (
+              <div className="border-t pt-4">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">Add New Activity</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Activity</label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      value={newActivity.activity}
+                      onChange={(e) =>
+                        setNewActivity({ ...newActivity, activity: e.target.value })
+                      }
+                      placeholder="Enter activity name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                    <input
+                      type="number"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      value={newActivity.duration}
+                      onChange={(e) =>
+                        setNewActivity({ ...newActivity, duration: e.target.value })
+                      }
+                      placeholder="Enter duration"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddActivity}
+                    className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Add Activity
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

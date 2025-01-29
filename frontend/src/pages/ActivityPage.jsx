@@ -11,68 +11,55 @@ const ActivityPage = () => {
   const [showLogModal, setShowLogModal] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch activities for the child
+  // Define fetchActivities function
+  const fetchActivities = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get(`/api/children/getActivities/${childId}`, {
+        headers: { Authorization: `${token}` },
+      });
+      setActivities(response.data.activities);
+      setChildName(response.data.childName);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    }
+  };
+
+  // Fetch activities on component mount
   useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`/api/children/getActivities/${childId}`, {
-            headers: { Authorization: `${token}` },
-          });
-        setActivities(response.data.activities);
-        setChildName(response.data.childName);
-      } catch (error) {
-        console.error('Error fetching activities:', error);
-      }
-    };
     fetchActivities();
   }, [childId]);
 
-  // onAddActivity function to handle adding activities
-  const onAddActivity = async (selectedDate, newActivity) => {
+  const onAddActivity = async (date, activityData) => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await axios.post(
         '/api/children/addActivity',
         {
-          childId: childId,
-          activity: newActivity.activity,
-          duration: newActivity.duration,
-          date: selectedDate,
+          childId,
+          activity: activityData.activity,
+          duration: parseInt(activityData.duration),
+          date: date.toISOString()
         },
         {
-          headers: { Authorization: `${token}` },
+          headers: {
+            Authorization: token,
+            'Content-Type': 'application/json'
+          }
         }
       );
-      if (response.status === 201) {
-        // Fetch the updated activities after adding the new one
-        const fetchActivities = async () => {
-          try {
-            const response = await axios.get(`/api/children/getActivities/${childId}`, {
-              headers: { Authorization: `${token}` },
-            });
-            setActivities(response.data.activities);
-            const analysisResponse = await axios.post(
-              '/api/children/performAnalysis', // Adjust this endpoint according to your backend API
-              { activities: response.data.activities },
-              {
-                headers: { Authorization: `${token}` },
-              }
-            );
-            alert(`Analysis: ${analysisResponse.data.analysis}`);
 
-          } catch (error) {
-            console.error('Error fetching activities:', error);
-          }
-        };
-        
-        fetchActivities(); // Update the activities after adding the new one
-      } else {
-        alert('Failed to add activity');
-      }
+      // Update the activities state with the new activity
+      setActivities(prevActivities => [...prevActivities, response.data.activity]);
+      
+      return response.data;
     } catch (error) {
       console.error('Error adding activity:', error);
-      alert('Error adding activity');
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        throw new Error(error.response.data.message || 'Error adding activity');
+      }
+      throw error;
     }
   };
 
@@ -85,7 +72,11 @@ const ActivityPage = () => {
         Back to Dashboard
       </button>
       <h1 className="text-2xl font-bold mb-4">{childName}'s Activity Calendar</h1>
-      <ActivityCalendar activities={activities} onAddActivity={onAddActivity} />
+      <ActivityCalendar 
+        activities={activities} 
+        onAddActivity={onAddActivity}
+        childId={childId} // Pass childId to calendar
+      />
       <FloatingButton onClick={() => setShowLogModal(true)} />
     </div>
   );

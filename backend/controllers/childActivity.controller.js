@@ -32,30 +32,69 @@ exports.getAllChildProfiles = async (req, res) => {
   }
 };
 exports.addActivity = async (req, res) => {
-  const { childId, activity, duration, date } = req.body;
-
   try {
-    // Find the child profile
-    const childProfile = await ChildProfile.findOne({ _id: childId });
+    const { childId, activity, duration, date } = req.body;
+    console.log('Received activity data:', { childId, activity, duration, date });
 
-    if (!childProfile) {
-      return res.status(404).json({ message: 'Child profile not found' });
+    // Validate required fields
+    if (!childId || !activity || !duration || !date) {
+      console.log('Missing required fields:', { childId, activity, duration, date });
+      return res.status(400).json({ 
+        message: 'Missing required fields: childId, activity, duration, and date are required',
+        received: { childId, activity, duration, date }
+      });
     }
 
-    // Add the new activity
-    childProfile.activities.push({
-      activity,
-      category: '', // You can add a category if needed
-      duration,
-      date: new Date(date),
-      notes: '', // Optional notes if needed
-    });
+    // Find the child profile
+    const childProfile = await ChildProfile.findById(childId);
+    console.log('Found child profile:', childProfile ? 'yes' : 'no');
 
-    await childProfile.save();
-    res.status(201).json({ message: 'Activity added successfully', childProfile });
+    if (!childProfile) {
+      return res.status(404).json({ 
+        message: 'Child profile not found',
+        childId 
+      });
+    }
+
+    // Create new activity with _id
+    const newActivity = {
+      _id: new mongoose.Types.ObjectId(),
+      activity,
+      duration: Number(duration),
+      date: new Date(date),
+      category: '',
+      notes: ''
+    };
+
+    // Use $push operator to add the activity
+    const updatedChild = await ChildProfile.findByIdAndUpdate(
+      childId,
+      { $push: { activities: newActivity } },
+      { 
+        new: true,
+        runValidators: false
+      }
+    );
+
+    if (!updatedChild) {
+      return res.status(404).json({
+        message: 'Failed to update child profile',
+        childId
+      });
+    }
+
+    // Return the newly added activity
+    res.status(201).json({ 
+      message: 'Activity added successfully', 
+      activity: newActivity
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error adding activity:', error);
+    res.status(500).json({ 
+      message: 'Error adding activity', 
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 
