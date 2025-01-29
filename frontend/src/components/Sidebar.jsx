@@ -32,7 +32,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
             description: 'Overview of your children'
         },
         {
-            title: 'Child Profiles',
+            title: 'Add Child',
             path: '/create-child-profile',
             icon: FaChild,
             description: 'Manage child profiles'

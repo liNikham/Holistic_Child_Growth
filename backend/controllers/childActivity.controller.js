@@ -4,9 +4,9 @@ const mongoose = require('mongoose');
 exports.createChildProfile = async (req, res) => {
   console.log("in create child profile")
   try {
-    const { name, dateOfBirth, gender } = req.body;
+    const { name, dateOfBirth, gender ,height,weight} = req.body;
     const parentId = req.user; // Extracted from the logged-in parent's token
-    const childProfile = new ChildProfile({ name, dateOfBirth, gender, parentId });
+    const childProfile = new ChildProfile({ name, dateOfBirth, gender, parentId,height,weight });
 
     const savedChild = await childProfile.save().catch((error) => {
       console.error("Save failed:", error);

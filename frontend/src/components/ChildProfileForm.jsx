@@ -5,6 +5,8 @@ const ChildProfileForm = ({ onProfileCreated }) => {
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,12 +16,16 @@ const ChildProfileForm = ({ onProfileCreated }) => {
         name,
         dateOfBirth,
         gender,
+        height,
+        weight,
         parentId: 'parent123', // Replace with actual parent ID from auth
       });
       onProfileCreated(response.data); // Notify parent component
       setName('');
       setDateOfBirth('');
       setGender('');
+      setHeight('');
+      setWeight('');
     } catch (error) {
       console.error('Error creating profile:', error);
     }
@@ -61,6 +67,28 @@ const ChildProfileForm = ({ onProfileCreated }) => {
           <option value="Female">Female</option>
           <option value="Other">Other</option>
         </select>
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 font-bold mb-2">Height (cm)</label>
+        <input
+          type="number"
+          value={height}
+          onChange={(e) => setHeight(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          required
+          min="0"
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 font-bold mb-2">Weight (kg)</label>
+        <input
+          type="number"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          required
+          min="0"
+        />
       </div>
       <button
         type="submit"
