@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaBrain, FaChartLine, FaLightbulb, FaChild } from 'react-icons/fa';
+import { FaBrain, FaChartLine, FaLightbulb, FaChild, FaTrophy, FaCalendarCheck } from 'react-icons/fa';
 import ActivityRecommendations from '../components/ActivityRecommendations';
 import { Line } from 'react-chartjs-2';
 import {
@@ -32,6 +32,7 @@ const SmartInsightsPage = () => {
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [progressData, setProgressData] = useState(null);
+    const [milestones, setMilestones] = useState([]);
 
     useEffect(() => {
         fetchChildren();
@@ -61,12 +62,18 @@ const SmartInsightsPage = () => {
     const fetchActivities = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.get(`/api/children/getActivities/${selectedChild}`, {
-                headers: { Authorization: token }
-            });
-            setActivities(response.data.activities);
+            const [activitiesRes, milestonesRes] = await Promise.all([
+                axios.get(`/api/children/getActivities/${selectedChild}`, {
+                    headers: { Authorization: token }
+                }),
+                axios.get(`/api/children/predictMilestones/${selectedChild}`, {
+                    headers: { Authorization: token }
+                })
+            ]);
+            setActivities(activitiesRes.data.activities);
+            setMilestones(milestonesRes.data.predictions);
         } catch (error) {
-            console.error('Error fetching activities:', error);
+            console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
         }
@@ -199,6 +206,79 @@ const SmartInsightsPage = () => {
             .slice(1);
     };
 
+    const renderMilestonePredictions = () => {
+        return (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-bold mb-6 flex items-center">
+                    <FaTrophy className="mr-2 text-purple-600" />
+                    Upcoming Milestones Prediction
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {milestones.map((milestone, index) => (
+                        <div 
+                            key={index}
+                            className="relative bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-100"
+                        >
+                            <div className="flex items-start space-x-4">
+                                <div className="flex-shrink-0">
+                                    <div className={`p-2 rounded-full ${
+                                        milestone.confidence > 80 
+                                            ? 'bg-green-100 text-green-600' 
+                                            : milestone.confidence > 50 
+                                                ? 'bg-yellow-100 text-yellow-600' 
+                                                : 'bg-red-100 text-red-600'
+                                    }`}>
+                                        <FaCalendarCheck className="text-xl" />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-800 mb-1">
+                                        {milestone.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mb-2">
+                                        {milestone.description}
+                                    </p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-purple-600">
+                                            Expected in: {milestone.timeframe}
+                                        </span>
+                                        <div className="flex items-center">
+                                            <div className="w-20 h-2 bg-gray-200 rounded-full mr-2">
+                                                <div 
+                                                    className={`h-full rounded-full ${
+                                                        milestone.confidence > 80 
+                                                            ? 'bg-green-500' 
+                                                            : milestone.confidence > 50 
+                                                                ? 'bg-yellow-500' 
+                                                                : 'bg-red-500'
+                                                    }`}
+                                                    style={{ width: `${milestone.confidence}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-sm text-gray-600">
+                                                {milestone.confidence}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-3 text-sm">
+                                <h4 className="font-medium text-gray-700 mb-1">
+                                    Recommended Activities:
+                                </h4>
+                                <ul className="list-disc list-inside text-gray-600 space-y-1">
+                                    {milestone.recommendations.map((rec, idx) => (
+                                        <li key={idx}>{rec}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="p-6">
             <div className="mb-8">
@@ -279,6 +359,8 @@ const SmartInsightsPage = () => {
                             ))}
                         </div>
                     </div>
+
+                    {renderMilestonePredictions()}
                 </div>
             ) : (
                 <div className="text-center py-12">

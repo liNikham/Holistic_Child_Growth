@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaChild, FaBirthdayCake, FaVenusMars, FaChartLine } from 'react-icons/fa';
-import Slider from '../components/Slider/Slider';
 
 const Dashboard = () => {
   const [children, setChildren] = useState([]);
