@@ -48,6 +48,7 @@ const SmartInsightsPage = () => {
             const token = localStorage.getItem('authToken');
             const response = await axios.get('/api/children/getAllChildProfiles', {
                 headers: { Authorization: token }
+                
             });
             setChildren(response.data);
             if (response.data.length > 0) {
@@ -64,13 +65,36 @@ const SmartInsightsPage = () => {
             const response = await axios.get(`/api/children/getActivities/${selectedChild}`, {
                 headers: { Authorization: token }
             });
-            setActivities(response.data.activities);
+           
+            // For each activity, categorize it using the new endpoint
+            const activitiesWithCategories = await Promise.all(response.data.activities.map(async (activity) => {
+                console.log(activity);
+                const categoryResponse = await axios.post(
+                    '/api/children/categorize', 
+                    { description: activity.activity },
+                    {
+                      headers: {
+                        Authorization: `${token}`,
+                         'Content-Type': 'application/json'
+                      }
+                    }
+                  );
+                
+                console.log(categoryResponse.data);
+                return {
+                    ...activity,
+                    category: categoryResponse.data.category // Assuming the response contains a category
+                };
+            }));
+    
+            setActivities(activitiesWithCategories);
         } catch (error) {
             console.error('Error fetching activities:', error);
         } finally {
             setLoading(false);
         }
     };
+    
 
     const processActivitiesData = (activities) => {
         // Group activities by date
@@ -84,10 +108,10 @@ const SmartInsightsPage = () => {
                     creative: 0
                 };
             }
+            // Dynamically use the category from the activity
             acc[date][activity.category] += parseInt(activity.duration);
             return acc;
         }, {});
-
         // Convert to chart data format
         const dates = Object.keys(groupedActivities).sort((a, b) => new Date(a) - new Date(b));
         const categories = ['physical', 'cognitive', 'social', 'creative'];
@@ -114,9 +138,12 @@ const SmartInsightsPage = () => {
             }))
         };
     };
+    
 
     useEffect(() => {
         if (activities.length > 0) {
+            const chartData = processActivitiesData(activities);
+        console.log('Chart Data:', chartData);
             setProgressData(processActivitiesData(activities));
         }
     }, [activities]);

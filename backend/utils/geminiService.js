@@ -255,3 +255,44 @@ exports.categorizeActivitiesUsingGemini = async (req, res) => {
 };
 
 
+exports.categorizeActivity = async (req, res) => {
+    const { description } = req.body; // Activity description sent in request body
+    console.log(description, "here");
+
+    if (!description) {
+        return res.status(400).json({ error: "Activity description is required." });
+    }
+
+    try {
+        const prompt = `Categorize the following activity description into one of these categories: 'Physical', 'Cognitive', 'Social', 'Creative'. Activity: "${description}"`;
+
+        const config = {
+            method: "post",
+            url: `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            data: {
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            }
+        };
+
+        // Call Gemini API to categorize the activity
+        const response = await retryRequest(config, 5, 1000);
+        const category = response.data.candidates[0].content.parts[0].text.trim().toLowerCase();
+
+        // Send the category back in the response
+        return res.status(200).json({ category });
+
+    } catch (error) {
+        console.error("Error categorizing activity:", error.response?.data || error.message);
+        return res.status(500).json({ error: "Failed to categorize activity" });
+    }
+};
+
+
+

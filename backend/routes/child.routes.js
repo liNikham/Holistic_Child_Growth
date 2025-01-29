@@ -6,7 +6,7 @@ const recommendationController = require('../controllers/recommendationControlle
 // Route to create a child profile
 
 const router = express.Router();
-
+router.post('/categorize',verifyToken,geminiService.categorizeActivity);
 router.post('/createChildProfile', verifyToken, childActivity.createChildProfile);
 router.get('/getAllChildProfiles', verifyToken, childActivity.getAllChildProfiles);
 router.post('/addActivity', verifyToken, childActivity.addActivity);
@@ -15,6 +15,7 @@ router.post('/performAnalysis', verifyToken, geminiService.generateAnalysis);
 router.get('/generateMonthlySummary', verifyToken, childActivity.generateMonthlySummary);
 router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivitiesUsingGemini);
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
+
 
 // Add more routes as needed
 module.exports = router;

@@ -41,13 +41,17 @@ exports.getRecommendations = async (req, res) => {
     `;
 
     const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    
-    // Try to parse the response as JSON, with fallback recommendations
+    const responseText = await result.response.text(); // Ensure proper extraction
+
     let recommendations;
     try {
-      const parsedResponse = JSON.parse(responseText);
-      recommendations = parsedResponse.recommendations;
+      // Extract JSON part strictly
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        recommendations = JSON.parse(jsonMatch[0]).recommendations;
+      } else {
+        throw new Error('No valid JSON found');
+      }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
       // Provide fallback recommendations
@@ -95,7 +99,7 @@ exports.getRecommendations = async (req, res) => {
     `;
     
     const insightsResult = await model.generateContent(insightsPrompt);
-    const insights = insightsResult.response.text();
+    const insights = await insightsResult.response.text();
 
     res.status(200).json({
       recommendations,
@@ -131,4 +135,4 @@ const calculateActivityStats = (activities) => {
       activities.reduce((sum, act) => sum + (parseInt(act.duration) || 0), 0) / activities.length
     )
   };
-}; 
+};
