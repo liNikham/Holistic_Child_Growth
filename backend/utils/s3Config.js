@@ -69,7 +69,7 @@ function streamToString(stream) {
 }
 
 async function searchJournalEntries(question, childId) {
-    console.log(question, childId);
+    // console.log(question, childId);
     const bucketName = process.env.AWS_BUCKET_NAME;
     const key = `summaries/${childId}.json`;
 

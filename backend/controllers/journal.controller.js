@@ -11,7 +11,7 @@ exports.queryToJournal = async (req, res) => {
             });
         }
         const result = await searchJournalEntries(question, childId);
-        console.log(result);
+
         if (!result.success) {
             return res.status(404).json({
                 success: false,

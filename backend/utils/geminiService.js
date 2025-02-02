@@ -88,6 +88,7 @@ exports.generateMonthlySummary = async (reqBody) => {
         const currentMonth = new Date().getMonth() + 1; // getMonth() returns 0-11, so add 1
         const addToS3 = currentMonth > parseInt(month) ? true : false;
         // Fetch activities from MongoDB
+
         const startDate = new Date(`${year}-${month}-01`);
         const endDate = new Date(`${year}-${month}-31`);
 
@@ -96,12 +97,14 @@ exports.generateMonthlySummary = async (reqBody) => {
             return { error: "Child not found." };
         }
 
+
         const activities = child.activities.filter(activity =>
             new Date(activity.date) >= startDate && new Date(activity.date) <= endDate
         );
         if (activities.length === 0) {
             return { error: "No activities found for this period." };
         }
+
 
         const prompt = `Generate a detailed monthly summary for a child based on the following activities for ${month} ${year}:
         ${JSON.stringify(activities)}
@@ -128,10 +131,10 @@ exports.generateMonthlySummary = async (reqBody) => {
         };
         const response = await retryRequest(config, 5, 1000);
         const generatedText = response.data.candidates[0].content.parts[0].text;
-
+        
         return { summary: generatedText.trim(), addToS3 };
     } catch (error) {
-        console.error("Error generating monthly summary:", error.response?.data || error.message);
+        console.error("Error generating monthly summary in geminiService:", error.response?.data || error.message);
         return { error: "Failed to generate monthly summary" };
     }
 };

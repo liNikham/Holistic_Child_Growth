@@ -309,7 +309,7 @@ const MonthlySummary = () => {
                             onChange={(e) => setSelectedChild(e.target.value)}
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                            <option value="">{t('monthlySummary.selectChild')}</option>
+                            <option value="">{t('Select Child')}</option>
                             {Array.isArray(children) && children.length > 0 ? (
                                 children.map((child) => (
                                     <option key={child._id} value={child._id}>

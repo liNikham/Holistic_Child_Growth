@@ -128,19 +128,21 @@ exports.generateMonthlySummary = async (req, res) => {
     if (!childId || !month || !year) {
       return res.status(400).json({ error: "Child ID, month, and year are required." });
     }
-    const { summary, addedToS3, error } = await geminiService.generateMonthlySummary(req.query)
-    if (error) {
-      return res.status(400).json({ error });
+
+    const response = await geminiService.generateMonthlySummary(req.query)
+    if (response.error) {
+      return res.status(400).json({ error: response.error });
     }
 
-    if (!addedToS3) {
+
+    if (response.addedToS3) {
       summaryBody = {
         "month": month,
         "year": year,
         "childId": childId,
-        "summary": summary,
+        "summary": response.summary,
       }
-      const { success, url } = await uploadSummaryToS3(summary, childId, month, year);
+      const { success, url } = await uploadSummaryToS3(response.summary, childId, month, year);
       if (!success) {
         return res.status(500).json({ error: "Failed to upload summary to S3" });
       }
@@ -153,7 +155,7 @@ exports.generateMonthlySummary = async (req, res) => {
       await addedSummary.save();
     }
 
-    return res.status(200).json({ summary });
+    return res.status(200).json({ summary: response.summary });
   } catch (error) {
     console.error("Error generating monthly summary:", error.response?.data || error.message);
     return res.status(500).json({ error: "Failed to generate monthly summary" });
