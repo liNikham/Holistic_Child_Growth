@@ -3,7 +3,7 @@ const { searchJournalEntries } = require('../utils/s3Config')
 exports.queryToJournal = async (req, res) => {
     try {
         const { question, childId } = req.body;
-        console.log(question, childId);
+        console.log("Here ............................................................................",question, childId);
         if (!question || !childId) {
             return res.status(400).json({
                 success: false,

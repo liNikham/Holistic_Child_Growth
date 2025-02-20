@@ -64,8 +64,9 @@ const JournalQuery = () => {
                 }
             });
 
+            console.log(response.data)
             if (response.data.success && response.data.answers) {
-                setQueryResponse(response.data.answers[0]); // Taking the first answer
+                setQueryResponse(response.data.answers); // Taking the first answer
             }
         } catch (error) {
             console.error('Error fetching journal query:', error);
@@ -210,7 +211,7 @@ const JournalQuery = () => {
                 <div className="bg-white rounded-xl shadow-lg p-6">
                     <h2 className="text-xl font-semibold text-gray-800 mb-4">Response</h2>
                     <div className="prose max-w-none">
-                        {formatResponse(queryResponse.text)}
+                        {queryResponse}
                     </div>
                 </div>
             )}

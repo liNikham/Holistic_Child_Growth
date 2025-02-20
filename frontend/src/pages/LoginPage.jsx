@@ -27,7 +27,7 @@ const LoginPage = () => {
             'https://www.googleapis.com/auth/userinfo.email'
         ].join(" ")
     }
-
+    
     const qs = new URLSearchParams(options);
     const googleAuthUrl = `${rootUrl}?${qs.toString()}`
 
