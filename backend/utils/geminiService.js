@@ -8,7 +8,7 @@ const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-1.5-flash";
 
 // Retry logic with exponential backoff
-const retryRequest = async (config, retries = 3, delay = 1000) => {
+exports.retryRequest = async (config, retries = 3, delay = 1000) => {
     let attempt = 0;
 
     while (attempt < retries) {

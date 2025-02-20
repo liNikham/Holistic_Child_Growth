@@ -3,14 +3,51 @@ const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
 require('dotenv').config();
+const { getCollection } = require('../server');
+const { retryRequest } = require('./geminiService');
+const { addDocuments, query } = require('./chromaService');
+
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const MODEL = "gemini-1.5-flash";
+const GEMINI_EMBEDDING_URL = "https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedText";
+
 
 const AWSClient = new S3Client({
     region: process.env.AWS_REGION,
+
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
 });
+
+async function getEmbeddingFromGemini(text) {
+    try {
+        const response = await axios.post(
+            `${GEMINI_EMBEDDING_URL}?key=${process.env.GEMINI_API_KEY}`,
+            { text },
+            { headers: { "Content-Type": "application/json" } }
+        );
+
+        return response.data.embedding.values; // Returns embedding vector
+    } catch (error) {
+        console.error("Error getting embedding:", error);
+        return null;
+    }
+}
+
+async function storeJournalEntries(journalEntries, childId) {
+    for (const entry of journalEntries) {
+        const embedding = await getEmbeddingFromGemini(entry.summary);
+        if (!embedding) continue;
+        const collection = getCollection();
+        await collection.add({
+            ids: [`${childId}_${entry.month}_${entry.year}`],
+            embeddings: [embedding],
+            metadatas: [{ childId, text: entry.summary, date: `${entry.month}/${entry.year}` }]
+        });
+    }
+}
 
 async function uploadSummaryToS3(summary, childId, month, year) {
     const region = process.env.AWS_REGION;
@@ -83,59 +120,140 @@ async function searchJournalEntries(question, childId) {
         // if (!data.body) {
         //     return { success: true, found: false, message: "No journal entries found" };
         // }
+        const collectionName = "childJournal"
         const bodyContents = await streamToString(data.Body);
         const journalEntries = JSON.parse(bodyContents);
+        // console.log("Getting journal entries", journalEntries);
 
-        // Prepare TF-IDF search
-        const tfidf = new TfIdf();
 
-        // Add all journal entries to the corpus
-        journalEntries.forEach((entry, index) => {
-            tfidf.addDocument(entry.summary.toLowerCase());
-            entry.index = index; // Add index for reference
-        });
 
-        // Process the question
-        const processedQuestion = question.toLowerCase();
-
-        // Calculate similarity scores
-        const scores = [];
-        tfidf.tfidfs(processedQuestion, function (i, measure) {
-            scores.push({
-                index: i,
-                score: measure,
-                entry: journalEntries[i]
-            });
-        });
-
-        // Sort by relevance and get top 3 matches
-        const topMatches = scores
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3)
-            .filter(match => match.score > 0);
-
-        if (topMatches.length === 0) {
-            return {
-                success: true,
-                found: false,
-                message: "No relevant information found in the journal.",
-                answers: []
-            };
+        let context = await query(collectionName, question);
+        if(!context.found){
+            console.log("Adding documents to collection");
+            vectorDocument = await addDocuments(collectionName, journalEntries);
+            context = await query(collectionName, question);
         }
 
-        // Format the responses
-        const answers = topMatches.map(match => ({
-            text: match.entry.summary,
-            date: `${match.entry.month}/${match.entry.year}`,
-            relevanceScore: match.score.toFixed(2)
-        }));
 
+        // return {
+        //     success: true,
+        //     found: true,
+        //     answers:context.document,
+        //     metadata: context.metadata,
+        //     link: process.env.AWS_S3_ENDPOINT + '/' + key
+        // };
+
+        // await storeJournalEntries(journalEntries, childId);
+
+        // const questionEmbedding = await getEmbeddingFromGemini(question);
+        // if (!questionEmbedding) {
+        //     return { success: false, message: "Failed to generate embedding for the question." };
+        // }
+
+        // const searchResults = await collection.query({
+        //     queryEmbeddings: [questionEmbedding],
+        //     nResults: 3
+        // });
+        // const relevantContexts = searchResults.metadatas.map(meta => meta.text);
+
+        // if (relevantContexts.length === 0) {
+        //     return { success: true, found: false, message: "No relevant information found." };
+        // }
+
+
+        // const contextText = relevantContexts.join("\n\n");
+
+        const prompt = `
+        You are an expert in child development. Use the following retrieved journal entries as context to answer the user's question:
+
+        Context: ${context.document}
+
+        Question: ${question}
+
+        Answer in a structured and detailed manner.
+        `;
+
+        const config = {
+            method: "post",
+            url: `${BASE_URL}/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            headers: {
+                "Content-Type": "application/json",
+            },
+
+            data: {
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: prompt
+                            }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        const response = await retryRequest(config, 5, 1000);
+
+        // Extract the generated text from Gemini's response
+        const generatedText = response.data.candidates[0].content.parts[0].text;
         return {
             success: true,
             found: true,
-            answers,
+            answers: generatedText,
             link: process.env.AWS_S3_ENDPOINT + '/' + key
         };
+        // Prepare TF-IDF search
+        // const tfidf = new TfIdf();
+
+
+        // // Add all journal entries to the corpus
+        // journalEntries.forEach((entry, index) => {
+        //     tfidf.addDocument(entry.summary.toLowerCase());
+        //     entry.index = index; // Add index for reference
+        // });
+
+        // // Process the question
+        // const processedQuestion = question.toLowerCase();
+
+        // // Calculate similarity scores
+        // const scores = [];
+        // tfidf.tfidfs(processedQuestion, function (i, measure) {
+        //     scores.push({
+        //         index: i,
+        //         score: measure,
+        //         entry: journalEntries[i]
+        //     });
+        // });
+
+        // // Sort by relevance and get top 3 matches
+        // const topMatches = scores
+        //     .sort((a, b) => b.score - a.score)
+        //     .slice(0, 3)
+        //     .filter(match => match.score > 0);
+
+        // if (topMatches.length === 0) {
+        //     return {
+        //         success: true,
+        //         found: false,
+        //         message: "No relevant information found in the journal.",
+        //         answers: []
+        //     };
+        // }
+
+        // // Format the responses
+        // const answers = topMatches.map(match => ({
+        //     text: match.entry.summary,
+        //     date: `${match.entry.month}/${match.entry.year}`,
+        //     relevanceScore: match.score.toFixed(2)
+        // }));
+
+        // return {
+        //     success: true,
+        //     found: true,
+        //     answers,
+        //     link: process.env.AWS_S3_ENDPOINT + '/' + key
+        // };
     } catch (error) {
         console.error("Error searching journal entries:", error);
         return {

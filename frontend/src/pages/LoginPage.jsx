@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from "react-redux";
 import { signInStart, signInSuccess, signInFailure } from '../features/userSlice';
 import axios from 'axios';
+import { FcGoogle } from 'react-icons/fc';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -10,7 +11,30 @@ const LoginPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { loginLoading, loginError } = useSelector((state) => state.user);
+    
+    const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth"
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URL;
 
+    const options = {
+        redirect_uri: redirectUri,
+        client_id: googleClientId,
+        access_type: 'offline',
+        response_type: 'code',
+        prompt: 'consent',
+        scope: [
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/userinfo.email'
+        ].join(" ")
+    }
+
+    const qs = new URLSearchParams(options);
+    const googleAuthUrl = `${rootUrl}?${qs.toString()}`
+
+    const handleGoogleLogin = () => {
+        window.location.href = googleAuthUrl;
+    };
+    console.log(googleAuthUrl)
     const handleLogin = async (e) => {
         e.preventDefault();
         dispatch(signInStart());
@@ -109,6 +133,26 @@ const LoginPage = () => {
                                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                             >
                                 {loginLoading ? 'Signing in...' : 'Sign in'}
+                            </button>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            >
+                                <FcGoogle className="w-5 h-5" />
+                                Sign in with Google
                             </button>
                         </div>
 
