@@ -1,27 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-    FaChild,
-    FaRobot,
-    FaPaperPlane,
     FaSpinner,
-    FaSearch,
-    FaHistory,
-    FaBookmark,
-    FaRegBookmark,
     FaInfoCircle,
     FaLightbulb,
     FaBrain,
     FaStar,
     FaMicrophone,
     FaMicrophoneSlash,
-    FaGlobe,
-    FaCheck
+    
 } from 'react-icons/fa';
 
 const ParentQuery = () => {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [children, setChildren] = useState([]);
     const [selectedChild, setSelectedChild] = useState('');

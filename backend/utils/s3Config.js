@@ -4,7 +4,7 @@ const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
 require('dotenv').config();
 const { getCollection } = require('../server');
-const { retryRequest } = require('./geminiService');
+const { retryRequest } = require('../utils/commonUtils');
 const { addDocuments, query } = require('./chromaService');
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";

@@ -8,5 +8,6 @@ router.post('/register', auth.registerParent);
 router.post('/login', auth.loginUser);
 router.post('/child', verifyToken, auth.addChildProfile);
 router.get("/children", verifyToken, auth.getChildProfiles);
+router.get('/google-callback', auth.googleAuth);
 
 module.exports = router;

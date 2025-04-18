@@ -12,7 +12,7 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const { loginLoading, loginError } = useSelector((state) => state.user);
     
-    const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth"
+    const rootUrl = import.meta.env.VITE_GOOGLE_ROOT_URL
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URL;
 
@@ -23,8 +23,8 @@ const LoginPage = () => {
         response_type: 'code',
         prompt: 'consent',
         scope: [
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/userinfo.email'
+            import.meta.env.VITE_GOOGLE_USER_EMAIL,
+            import.meta.env.VITE_GOOGLE_USER_PROFILE,
         ].join(" ")
     }
     

@@ -5,4 +5,5 @@ const journalController = require('../controllers/journal.controller');
 
 router.post('/query', journalController.queryToJournal);
 
+
 module.exports = router;

@@ -20,5 +20,6 @@ router.get('/getRecommendations/:childId', verifyToken, recommendationController
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
 
 
+
 // Add more routes as needed
 module.exports = router;

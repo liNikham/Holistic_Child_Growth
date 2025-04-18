@@ -105,7 +105,6 @@ exports.addChildProfile = async (req, res) => {
         })
     }
 
-
 }
 
 exports.getChildProfiles = async (req, res) => {
@@ -120,6 +119,116 @@ exports.getChildProfiles = async (req, res) => {
         res.status(400).json({
             message: err.message
         })
+    }
+}
+
+exports.googleAuth = async (req, res) => {
+    try {
+        const { code } = req.query;
+        if (!code) {
+            return res.status(400).json({ message: "Code not provided" });
+        }
+
+        console.log("Code received:", code);
+
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL,
+                grant_type: 'authorization_code',
+            }),
+        });
+
+        const tokens = await tokenResponse.json();
+        console.log('OAuth tokens received:', tokens);
+
+        if (!tokenResponse.ok) {
+            console.error('Token exchange failed:', tokens);
+            return res.status(400).json({ 
+                message: 'Failed to exchange authorization code for tokens' 
+            });
+        }
+
+        // Get user info with access token
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: {
+                Authorization: `Bearer ${tokens.access_token}`,
+            },
+        });
+
+        const userInfo = await userInfoResponse.json();
+        console.log('User info retrieved:', userInfo);
+
+        if (!userInfoResponse.ok) {
+            console.error('User info retrieval failed:', userInfo);
+            return res.status(400).json({ 
+                message: 'Failed to retrieve user information' 
+            });
+        }
+  
+        let user = await User.findOne({ email: userInfo.email });
+        if (!user) {
+            // Create a new user in your database
+            const newUser = new User({
+                name: userInfo.name,
+                email: userInfo.email,
+                picture: userInfo.picture,
+                password: Math.random().toString(36).slice(-8) // Generate a random password
+            });
+            user = await newUser.save();
+            console.log('New user created:', user._id);
+        } else {
+            if (user.picture !== userInfo.picture) {
+                user.picture = userInfo.picture;
+                await user.save();
+            }
+            console.log('Existing user logged in:', user._id);
+        }
+  
+        const token = createToken(user._id, user);
+        
+        // Set cookies
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // Only use HTTPS in production
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+        });
+        
+        // Also set a non-httpOnly cookie with user's basic info for UI display
+        const userInfo_safe = {
+            name: user.name,
+            email: user.email,
+            picture: user.picture
+        };
+        
+        res.cookie('user_info', JSON.stringify(userInfo_safe), {
+            httpOnly: false, // This allows JavaScript to read this cookie
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+        });
+  
+        // Perform actual redirect to dashboard
+        // Check if a specific redirect URL was requested in the original OAuth request
+        const redirectTo = req.query.state ? 
+            JSON.parse(decodeURIComponent(req.query.state)).redirectUrl || 'http://localhost:5173/dashboard' : 
+            'http://localhost:5173/dashboard';
+            
+        // Redirect the user to the dashboard or specified redirect URL
+        return res.redirect(redirectTo);
+
+    } catch (error) {
+        console.error("Google authentication error:", error);
+        res.status(500).json({ error: error.message });
     }
 }
 

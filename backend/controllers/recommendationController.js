@@ -1,7 +1,11 @@
 const ChildProfile = require('../models/childProfile.model');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const { retryRequest } = require('../utils/commonUtils');
+
+const API_KEY = process.env.GEMINI_API_KEY;
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const MODEL = "gemini-1.5-flash";
 
 exports.getRecommendations = async (req, res) => {
   try {
@@ -18,7 +22,7 @@ exports.getRecommendations = async (req, res) => {
       .slice(0, 10);
 
     // Analyze activities using Gemini AI
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     const prompt = `
       Based on these recent activities:
@@ -30,7 +34,7 @@ exports.getRecommendations = async (req, res) => {
           {
             "title": "Activity Name",
             "description": "Brief description",
-            "duration": 30,
+            "duration": 30 or necessary time in minutes,
             "category": "physical/cognitive/social/creative",
             "developmentalBenefits": ["benefit1", "benefit2"]
           }
@@ -40,8 +44,31 @@ exports.getRecommendations = async (req, res) => {
       Important: Respond ONLY with the JSON object, no additional text or formatting.
     `;
 
-    const result = await model.generateContent(prompt);
-    const responseText = await result.response.text(); // Ensure proper extraction
+    const config = {
+      method: "post",
+      url: `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
+      headers: {
+          "Content-Type": "application/json",
+      },
+      data: {
+          contents: [
+              {
+                  parts: [
+                      {
+                          text: prompt
+                      }
+                  ]
+              }
+          ]
+      }
+  };
+
+    const result = await retryRequest(config, 3, 1000); // Retry logic for API call
+    const responseText = result.data.candidates[0].content.parts[0].text;
+    if(!responseText) {
+      throw new Error('No response from AI');
+    }
+    console.log('AI response:', result.data.candidates[0].content.parts[0].text); // Log the AI response for debugging
 
     let recommendations;
     try {
@@ -97,21 +124,21 @@ exports.getRecommendations = async (req, res) => {
       
       Keep the response under 200 words.
     `;
-    
-    const insightsResult = await model.generateContent(insightsPrompt);
-    const insights = await insightsResult.response.text();
+
+    // const insightsResult = await model.generateContent(insightsPrompt);
+    // const insights = await insightsResult.response.text();
 
     res.status(200).json({
       recommendations,
-      insights,
+      // insights,
       activityStats
     });
 
   } catch (error) {
     console.error('Error generating recommendations:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error generating recommendations',
-      error: error.message 
+      error: error.message
     });
   }
 };

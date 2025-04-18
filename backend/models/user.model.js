@@ -20,7 +20,12 @@ const userSchema = new mongoose.Schema({
             type:mongoose.Schema.Types.ObjectId,
             ref:"ChildProfile"
         }
-    ]
+    ],
+    picture: {
+        type: String,
+        default: "https://www.gravatar.com/avatar/?d=mp"
+    },
+
     }
 );
 
