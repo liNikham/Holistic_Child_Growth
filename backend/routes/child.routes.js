@@ -19,6 +19,7 @@ router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivi
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
 router.get('/weight_for_age', verifyToken, whoController.wfa )
+router.get('/weight_for_height', verifyToken, whoController.wfh )
 
 
 // Add more routes as needed

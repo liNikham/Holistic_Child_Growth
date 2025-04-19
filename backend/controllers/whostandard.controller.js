@@ -1,84 +1,208 @@
-const {calculateAgeInDays, interpretWeightForAge, zScoreToPercentile, calculateWfaZscore, findClosestAgeReferenceData} = require('../utils/commonUtils');
+const { calculateAgeInDays,
+    interpretWeightForAge,
+    interpretWeightForHeight,
+    zScoreToPercentileForWfa,
+    zScoreToPercentileForWfh,
+    calculateWfaZscore,
+    calculateWfhZscore, 
+    findClosestAgeReferenceDataForWfa,
+    findClosestAgeReferenceDataForWfh,
+} = require('../utils/commonUtils');
 const wfaBoyDataset = require('../../dataset/downloads/wfa_boys_0-to-5-years_zscores.json');
 const wfaGirlDataset = require('../../dataset/downloads/wfa_girls_0-to-5-years_zscores.json');
+const wfhBoyDataset = require('../../dataset/downloads/wfh_boys_2-to-5-years_zscores.json')
+const wfhGirlDataset = require('../../dataset/downloads/wfh_girls_2-to-5-years_zscores.json')
 
 
 exports.wfa = async (req, res) => {
     try {
-        const {dob, weight, gender} = req.body;
+        const { dob, weight, gender } = req.body;
         const currentDate = new Date();
         const birthDate = new Date(dob);
-        
+
         // Calculate age in days
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         if (!['male', 'female'].includes(gender.toLowerCase())) {
-            return res.status(400).json({ 
-              error: 'Gender must be either "male" or "female".' 
+            return res.status(400).json({
+                error: 'Gender must be either "male" or "female".'
             });
-          }
-          
-          if (typeof weight !== 'number' || weight <= 0) {
-            return res.status(400).json({ 
-              error: 'Weight must be a positive number.' 
-            });
-          }
+        }
 
-          if (ageInDays > 1827) {
-            return res.status(400).json({ 
-              error: 'This assessment is designed for children up to 5 years of age.' 
+        if (typeof weight !== 'number' || weight <= 0) {
+            return res.status(400).json({
+                error: 'Weight must be a positive number.'
             });
-          }
+        }
 
-          const dataset = gender.toLowerCase() === 'male' ? wfaBoyDataset : wfaGirlDataset;
-          // Find the closest reference data
-          const reference = findClosestAgeReferenceData(dataset, ageInDays);
-          console.log('Reference Data:', reference);
-          // Calculate z-score
-          const zScore = calculateWfaZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
-          console.log('Z-Score:', zScore);
-          // Calculate percentile
-          const percentile = zScoreToPercentile(zScore);
-            console.log('Percentile:', percentile);
-          
-          // Interpret results
-          const interpretation = interpretWeightForAge(zScore, gender, ageInDays);
-          
-          // Return the assessment results
-          return res.json({
+        if (ageInDays > 1827) {
+            return res.status(400).json({
+                error: 'This assessment is designed for children up to 5 years of age.'
+            });
+        }
+
+        const dataset = gender.toLowerCase() === 'male' ? wfaBoyDataset : wfaGirlDataset;
+        // Find the closest reference data
+        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays);
+        console.log('Reference Data:', reference);
+        // Calculate z-score
+        const zScore = calculateWfaZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+        console.log('Z-Score:', zScore);
+        // Calculate percentile
+        const percentile = zScoreToPercentileForWfa(zScore);
+        console.log('Percentile:', percentile);
+
+        // Interpret results
+        const interpretation = interpretWeightForAge(zScore, gender, ageInDays);
+
+        // Return the assessment results
+        return res.json({
             assessment: 'weight-for-age',
             input: {
-              gender,
-              weight,
+                gender,
+                weight,
                 dob,
             },
             reference: {
-              day: reference.Day,
-              median: reference.M,
-              L: reference.L,
-              S: reference.S
+                day: reference.Day,
+                median: reference.M,
+                L: reference.L,
+                S: reference.S
             },
             results: {
-              zScore: parseFloat(zScore.toFixed(2)),
-              percentile,
-              status: interpretation.status,
-              severity: interpretation.severity,
-              recommendation: interpretation.recommendation,
-              details: interpretation.details
+                zScore: parseFloat(zScore.toFixed(2)),
+                percentile,
+                status: interpretation.status,
+                severity: interpretation.severity,
+                recommendation: interpretation.recommendation,
+                details: interpretation.details
             },
             referenceRanges: {
-              SD4neg: reference.SD4neg,
-              SD3neg: reference.SD3neg,
-              SD2neg: reference.SD2neg,
-              SD1neg: reference.SD1neg,
-              median: reference.SD0,
-              SD1: reference.SD1,
-              SD2: reference.SD2,
-              SD3: reference.SD3,
-              SD4: reference.SD4
+                SD4neg: reference.SD4neg,
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3,
+                SD4: reference.SD4
             }
-          });
+        });
         // Continue processing with the calculated age in days
-        
+
+    } catch (error) {
+        console.error('Error processing query:', error);
+        res.status(500).json({
+            error: 'Failed to process query',
+            details: error.message
+        });
+    }
+}
+
+exports.wfh = async (req, res) => {
+    try {
+        const { gender, weight, height, dob } = req.body;
+
+        // Validate required inputs
+        if (!gender || weight === undefined || height === undefined) {
+            return res.status(400).json({
+                error: 'Missing required parameters. Please provide gender, weight, and height.'
+            });
+        }
+
+        const currentDate = new Date();
+        const birthDate = new Date(dob);
+
+        const ageInDays = calculateAgeInDays(birthDate, currentDate);
+        const ageInYears = ageInDays / 365.25; // Convert days to years
+
+        if (ageInYears < 2 || ageInYears > 5) {
+            return res.status(400).json({
+                error: 'This assessment is designed for children between 2 and 5 years of age.'
+            });
+        }
+
+        if (!['male', 'female'].includes(gender.toLowerCase())) {
+            return res.status(400).json({
+                error: 'Gender must be either "male" or "female".'
+            });
+        }
+
+
+        if (typeof weight !== 'number' || weight <= 0) {
+            return res.status(400).json({
+                error: 'Weight must be a positive number.'
+            });
+        }
+
+        const dataset = gender.toLowerCase() === 'male' ? wfhBoyDataset : wfhGirlDataset;
+
+        const minHeight = Math.min(...dataset.map(item => item.Height));
+        const maxHeight = Math.max(...dataset.map(item => item.Height));
+
+        if (height < minHeight || height > maxHeight) {
+            return res.status(400).json({
+                error: `Height must be between ${minHeight} and ${maxHeight} cm for this assessment.`
+            });
+        }
+
+        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height));
+        let zScore;
+        try {
+            zScore = calculateWfhZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+
+            // Constrain extreme values for practical use
+            if (zScore > 8) zScore = 8;
+            if (zScore < -8) zScore = -8;
+
+        } catch (error) {
+            console.error('Z-score calculation error:', error);
+            return res.status(500).json({
+                error: 'Error calculating z-score. Please check input values.'
+            });
+        }
+
+        // Calculate percentile
+        const percentile = zScoreToPercentileForWfh(zScore);
+
+        // Interpret results
+        const interpretation = interpretWeightForHeight(zScore, gender, height);
+
+        // Return the assessment results
+        return res.json({
+            assessment: 'weight-for-height',
+            input: {
+                gender,
+                weight,
+                height
+            },
+            reference: {
+                height: reference.Height,
+                median: reference.M,
+                L: reference.L,
+                S: reference.S
+            },
+            results: {
+                zScore: parseFloat(zScore.toFixed(2)),
+                percentile,
+                status: interpretation.status,
+                severity: interpretation.severity,
+                nutritionalStatus: interpretation.nutritionalStatus,
+                recommendation: interpretation.recommendation,
+                details: interpretation.details
+            },
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
+        });
+
+
     } catch (error) {
         console.error('Error processing query:', error);
         res.status(500).json({
