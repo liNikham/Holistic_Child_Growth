@@ -1,6 +1,6 @@
 const {calculateAgeInDays, interpretWeightForAge, zScoreToPercentile, calculateWfaZscore, findClosestAgeReferenceData} = require('../utils/commonUtils');
 const wfaBoyDataset = require('../../dataset/downloads/wfa_boys_0-to-5-years_zscores.json');
-const wfaGirlDataset = require('../../dataset/downloads/wfa_girls_0-to-5-years_zscores.jsonx');
+const wfaGirlDataset = require('../../dataset/downloads/wfa_girls_0-to-5-years_zscores.json');
 
 
 exports.wfa = async (req, res) => {
