@@ -1,10 +1,11 @@
 const { calculateAgeInDays,
     interpretWeightForAge,
     interpretWeightForHeight,
+    interpretWeightForLength,
     zScoreToPercentileForWfa,
     zScoreToPercentileForWfh,
     calculateWfaZscore,
-    calculateWfhZscore, 
+    calculateWfhZscore,
     findClosestAgeReferenceDataForWfa,
     findClosestAgeReferenceDataForWfh,
 } = require('../utils/commonUtils');
@@ -12,6 +13,9 @@ const wfaBoyDataset = require('../../dataset/downloads/wfa_boys_0-to-5-years_zsc
 const wfaGirlDataset = require('../../dataset/downloads/wfa_girls_0-to-5-years_zscores.json');
 const wfhBoyDataset = require('../../dataset/downloads/wfh_boys_2-to-5-years_zscores.json')
 const wfhGirlDataset = require('../../dataset/downloads/wfh_girls_2-to-5-years_zscores.json')
+const wflBoyDataset = require('../../dataset/downloads/wfl_boys_0-to-2-years_zscores.json')
+const wflGirlDataset = require('../../dataset/downloads/wfl_girls_0-to-2-years_zscores.json')
+
 
 
 exports.wfa = async (req, res) => {
@@ -116,9 +120,9 @@ exports.wfh = async (req, res) => {
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25; // Convert days to years
 
-        if (ageInYears < 2 || ageInYears > 5) {
+        if (ageInYears > 5) {
             return res.status(400).json({
-                error: 'This assessment is designed for children between 2 and 5 years of age.'
+                error: 'This assessment is designed for children between 0 and 5 years of age.'
             });
         }
 
@@ -135,10 +139,35 @@ exports.wfh = async (req, res) => {
             });
         }
 
-        const dataset = gender.toLowerCase() === 'male' ? wfhBoyDataset : wfhGirlDataset;
+        let wfl= false;
+        let dataset
+        if (ageInYears < 2 && gender.toLowerCase() === 'male') {
+            dataset = wflBoyDataset;
+            wfl = true;
+        }
+        else if (ageInYears < 2 && gender.toLowerCase() === 'female') {
+            dataset = wflGirlDataset;
+            wfl = true;
+        }
+        else if (ageInYears >= 2 && ageInYears <= 5 && gender.toLowerCase() === 'female') {
+            dataset = wfhGirlDataset;
+        }
+        else if (ageInYears >= 2 && ageInYears <= 5 && gender.toLowerCase() === 'male') {
+            dataset = wfhBoyDataset;
+        }
 
-        const minHeight = Math.min(...dataset.map(item => item.Height));
-        const maxHeight = Math.max(...dataset.map(item => item.Height));
+
+        let minHeight
+        let maxHeight
+        if (wfl) {
+            minLength = Math.min(...dataset.map(item => item.Length));
+            maxLength = Math.max(...dataset.map(item => item.Length));
+        }
+        else{
+            minLength = Math.min(...dataset.map(item => item.Height));
+            maxLength = Math.max(...dataset.map(item => item.Height));
+        }
+
 
         if (height < minHeight || height > maxHeight) {
             return res.status(400).json({
@@ -146,7 +175,7 @@ exports.wfh = async (req, res) => {
             });
         }
 
-        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height));
+        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height),wfl);
         let zScore;
         try {
             zScore = calculateWfhZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
@@ -166,7 +195,13 @@ exports.wfh = async (req, res) => {
         const percentile = zScoreToPercentileForWfh(zScore);
 
         // Interpret results
-        const interpretation = interpretWeightForHeight(zScore, gender, height);
+        let interpretation
+        if(!wfl){
+            interpretation = interpretWeightForHeight(zScore, gender, height);
+        }
+        else{
+            interpretation = interpretWeightForLength(zScore, gender, height)
+        }
 
         // Return the assessment results
         return res.json({

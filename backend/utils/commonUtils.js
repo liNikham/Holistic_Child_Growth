@@ -54,13 +54,23 @@ exports.findClosestAgeReferenceDataForWfa = (data, ageInDays) => {
     return sortedData;
 }
 
-exports.findClosestAgeReferenceDataForWfh = (data, height) => {
-    const sortedData = data.sort((a, b) =>
-        Math.abs(a.Height - height) - Math.abs(b.Height - height)
-    );
+exports.findClosestAgeReferenceDataForWfh = (data, height, wfl) => {
+    if (wfl) {
+        const sortedData = data.sort((a, b) =>
+            Math.abs(a.Length - height) - Math.abs(b.Length - height)
+        );
 
-    // Return the closest match
-    return sortedData[0];
+        // Return the closest match
+        return sortedData[0];
+    } else {
+
+        const sortedData = data.sort((a, b) =>
+            Math.abs(a.Height - height) - Math.abs(b.Height - height)
+        );
+
+        // Return the closest match
+        return sortedData[0];
+    }
 }
 
 exports.calculateWfaZscore = (measurement, L, M, S) => {
@@ -250,3 +260,68 @@ exports.interpretWeightForHeight = (zScore, gender, height) => {
 
     return interpretation;
 }
+exports.interpretWeightForLength =(zScore, gender, length)=> {
+    let interpretation = {
+      status: '',
+      severity: '',
+      recommendation: '',
+      nutritionalStatus: '',
+      details: ''
+    };
+    
+    // Classification based on z-score ranges - same as before
+    if (zScore < -3) {
+      interpretation.status = "Severe wasting";
+      interpretation.severity = "Critical";
+      interpretation.nutritionalStatus = "Severe acute malnutrition";
+      interpretation.recommendation = "Immediate medical evaluation required";
+      interpretation.details = "Weight is severely below the recommended range for length, indicating serious nutritional deficiency.";
+    } else if (zScore < -2) {
+      interpretation.status = "Moderate wasting";
+      interpretation.severity = "Serious";
+      interpretation.nutritionalStatus = "Moderate acute malnutrition";
+      interpretation.recommendation = "Consult healthcare provider promptly";
+      interpretation.details = "Weight is significantly below the recommended range for length, suggesting nutritional problems.";
+    } else if (zScore < -1) {
+      interpretation.status = "Mild wasting";
+      interpretation.severity = "Moderate";
+      interpretation.nutritionalStatus = "At risk of malnutrition";
+      interpretation.recommendation = "Monitor nutrition and growth";
+      interpretation.details = "Weight is below the typical range for length. Monitor eating habits and ensure adequate nutrition.";
+    } else if (zScore <= 1) {
+      interpretation.status = "Normal weight-for-length";
+      interpretation.severity = "Normal";
+      interpretation.nutritionalStatus = "Normal nutritional status";
+      interpretation.recommendation = "Continue regular monitoring";
+      interpretation.details = "Weight is within the healthy range for length.";
+    } else if (zScore <= 2) {
+      interpretation.status = "Possible risk of overweight";
+      interpretation.severity = "Low concern";
+      interpretation.nutritionalStatus = "At risk of overnutrition";
+      interpretation.recommendation = "Monitor feeding practices";
+      interpretation.details = "Weight is slightly above the typical range for length. Review feeding patterns.";
+    } else if (zScore <= 3) {
+      interpretation.status = "Overweight";
+      interpretation.severity = "Moderate concern";
+      interpretation.nutritionalStatus = "Overweight";
+      interpretation.recommendation = "Evaluation of feeding practices recommended";
+      interpretation.details = "Weight is above the recommended range for length. Assessment of feeding habits is advised.";
+    } else {
+      interpretation.status = "Obesity";
+      interpretation.severity = "High concern";
+      interpretation.nutritionalStatus = "Obesity";
+      interpretation.recommendation = "Consult healthcare provider for nutritional assessment";
+      interpretation.details = "Weight is significantly above the recommended range for length. Consult with healthcare professional for guidance.";
+    }
+    
+    // Add age-specific recommendations for 0-2 years
+    if (length < 65) {
+      interpretation.recommendation += " For infants under 6 months, exclusive breastfeeding is recommended when possible.";
+    } else if (length < 85) {
+      interpretation.recommendation += " For infants 6-12 months, ensure appropriate complementary feeding along with continued breastfeeding.";
+    } else {
+      interpretation.recommendation += " For children 12-24 months, ensure adequate nutrition with diverse food groups.";
+    }
+    
+    return interpretation;
+  }
