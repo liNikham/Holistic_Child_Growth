@@ -4,7 +4,7 @@ const geminiService = require('../utils/geminiService');
 const { verifyToken } = require('../middleware/authMiddleware');
 const recommendationController = require('../controllers/recommendationController');
 const parentQueryController = require('../controllers/parentQueryController');
-
+const whoController = require('../controllers/whostandard.controller'); // Import the controller for weight-for-age
 // Route to create a child profile
 
 const router = express.Router();
@@ -18,7 +18,7 @@ router.get('/generateMonthlySummary', verifyToken, childActivity.generateMonthly
 router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivitiesUsingGemini);
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
-
+router.get('/weight_for_age', verifyToken, whoController.wfa )
 
 
 // Add more routes as needed
