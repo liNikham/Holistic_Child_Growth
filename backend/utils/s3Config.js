@@ -1,5 +1,6 @@
 const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const natural = require('natural');
+const ChildProfile = require('../models/childProfile.model');
 const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
 require('dotenv').config();
@@ -112,6 +113,8 @@ async function searchJournalEntries(question, childId) {
 
     try {
         // Fetch journal entries
+        
+        const child = await ChildProfile.findById(childId);
         const getObjectParams = {
             Bucket: bucketName,
             Key: key,
@@ -165,7 +168,7 @@ async function searchJournalEntries(question, childId) {
 
         const prompt = `
         You are an expert in child development. Use the following retrieved journal entries as context to answer the user's question:
-
+        child name: ${child.name}
         Context: ${context.document}
 
         Question: ${question}

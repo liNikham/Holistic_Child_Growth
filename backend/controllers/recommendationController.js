@@ -1,3 +1,5 @@
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
+
 const ChildProfile = require('../models/childProfile.model');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -6,6 +8,81 @@ const { retryRequest } = require('../utils/commonUtils');
 const API_KEY = process.env.GEMINI_API_KEY;
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-1.5-flash";
+
+const AWSClient = new S3Client({
+    region: process.env.AWS_REGION,
+
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
+
+function streamToString(stream) {
+  return new Promise((resolve, reject) => {
+      const chunks = [];
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('error', reject);
+      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+  });
+}
+
+exports.getJournalEntriesByChildId = async (req, res) => {
+  try {
+    console.log("Fetching journal entries for childId:", req.params.childId);
+    const { childId } = req.params;
+    console.log("Fetching journal entries for childId:", childId);
+    
+    const bucketName = process.env.AWS_BUCKET_NAME;
+    const key = `summaries/${childId}.json`;
+    const getObjectParams = {
+      Bucket: bucketName,
+      Key: key,
+    };
+    console.time('s3-fetch');
+    const command = new GetObjectCommand(getObjectParams);
+    
+    // Send the command to S3
+    const { Body, ContentType } = await AWSClient.send(command);
+    console.timeEnd('s3-fetch');
+
+    if (!Body) {
+      return res.status(200).json({
+        success: true,
+        found: false,
+        message: "No journal entries found"
+      });
+    }
+
+    // Set the appropriate content type
+    res.setHeader('Content-Type', ContentType || 'application/json');
+    
+    // Pipe the S3 stream directly to the response
+    Body.pipe(res);
+    
+    // Handle any errors in the stream
+    Body.on('error', (err) => {
+      console.error('Error streaming from S3:', err);
+      // If headers have not been sent yet
+      if (!res.headersSent) {
+        res.status(500).json({
+          message: 'Error streaming journal entries',
+          error: err.message
+        });
+      } else {
+        // If headers already sent, just end the response
+        res.end();
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching journal entries:', error);
+    res.status(500).json({
+      message: 'Error fetching journal entries',
+      error: error.message
+    });
+  }
+}
 
 exports.getRecommendations = async (req, res) => {
   try {
@@ -48,24 +125,24 @@ exports.getRecommendations = async (req, res) => {
       method: "post",
       url: `${BASE_URL}/models/${MODEL}:generateContent?key=${API_KEY}`,
       headers: {
-          "Content-Type": "application/json",
+        "Content-Type": "application/json",
       },
       data: {
-          contents: [
+        contents: [
+          {
+            parts: [
               {
-                  parts: [
-                      {
-                          text: prompt
-                      }
-                  ]
+                text: prompt
               }
-          ]
+            ]
+          }
+        ]
       }
-  };
+    };
 
     const result = await retryRequest(config, 3, 1000); // Retry logic for API call
     const responseText = result.data.candidates[0].content.parts[0].text;
-    if(!responseText) {
+    if (!responseText) {
       throw new Error('No response from AI');
     }
     console.log('AI response:', result.data.candidates[0].content.parts[0].text); // Log the AI response for debugging

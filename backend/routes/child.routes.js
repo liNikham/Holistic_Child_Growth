@@ -17,6 +17,7 @@ router.post('/performAnalysis', verifyToken, geminiService.generateAnalysis);
 router.get('/generateMonthlySummary', verifyToken, childActivity.generateMonthlySummary);
 router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivitiesUsingGemini);
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
+router.get('/journal/:childId', verifyToken, recommendationController.getJournalEntriesByChildId);
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
 router.get('/weight_for_age', verifyToken, whoController.wfa )
 router.get('/weight_for_height', verifyToken, whoController.wfh )
