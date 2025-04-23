@@ -35,6 +35,11 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
             name: 'dashboard',
             icon: FaHome
         },
+          {
+            path: '/who',
+            name: 'who',
+            icon: FaGlobe
+        },
         {
             path: '/create-child-profile',
             name: 'addChild',
@@ -75,11 +80,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
             name: 'smartInsights',
             icon: FaBrain
         },
-        {
-            path: '/who',
-            name: 'who',
-            icon: FaGlobe
-        },
+       
 
     ];
 

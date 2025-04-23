@@ -8,7 +8,7 @@ const whoController = require('../controllers/whostandard.controller'); // Impor
 // Route to create a child profile
 
 const router = express.Router();
-router.post('/categorize',verifyToken,geminiService.categorizeActivity);
+router.post('/categorize', verifyToken, geminiService.categorizeActivity);
 router.post('/createChildProfile', verifyToken, childActivity.createChildProfile);
 router.get('/getAllChildProfiles', verifyToken, childActivity.getAllChildProfiles);
 router.post('/addActivity', verifyToken, childActivity.addActivity);
@@ -19,10 +19,12 @@ router.get('/categorizedActivities', verifyToken, geminiService.categorizeActivi
 router.get('/getRecommendations/:childId', verifyToken, recommendationController.getRecommendations);
 router.get('/journal/:childId', verifyToken, recommendationController.getJournalEntriesByChildId);
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
-router.post('/weight_for_age', verifyToken, whoController.wfa )
-router.post('/weight_for_height', verifyToken, whoController.wfh )
+router.post('/weight_for_age', verifyToken, whoController.wfa)
+router.post('/weight_for_height', verifyToken, whoController.wfh)
 router.post('/length_height_for_age', verifyToken, whoController.lhfa);
 router.post('/bmi_for_age', verifyToken, whoController.bfa);
+router.pos('/update_height/:childId', verifyToken, childActivity.updateHeight);
+router.post('/update_weight/:childId', verifyToken, childActivity.updateWeight);
 
 
 // Add more routes as needed

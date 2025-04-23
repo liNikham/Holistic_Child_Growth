@@ -51,6 +51,7 @@
     "sidebar": {
         "dashboard": "Dashboard",
         "addChild": "Add Child",
+        "who": "Who",
         "dailyEntry": "Daily Entry",
         "childJournal": "Child Journal",
         "monthlySummary": "Monthly Summary",

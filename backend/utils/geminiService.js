@@ -85,7 +85,7 @@ exports.generateMonthlySummary = async (reqBody) => {
         }
 
 
-        const prompt = `Generate a detailed monthly summary for a child based on the following activities for ${month} ${year}:
+        const prompt = `Generate a detailed monthly summary for a child name ${child.name} based on the following activities for ${month} ${year}:
         ${JSON.stringify(activities)}
         
         The summary should include:
