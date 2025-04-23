@@ -58,7 +58,7 @@ const AppRouter = () => {
                     <Route path="/child-journal" element={<ChildJournal />} />
                     <Route path="/recommendations/:childId" element={<RecommendationsPage />} />
                     <Route path="/smart-insights" element={<SmartInsightsPage />} />
-                    <Route path='/who' element={<Who/>} />
+                    <Route path='/who' element={<Who />} />
                 </Route>
             </Routes>
         </Router>
