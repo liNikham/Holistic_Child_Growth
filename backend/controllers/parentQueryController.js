@@ -2,13 +2,15 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Initialize the Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 exports.askQuestion = async (req, res) => {
     try {
         const { childId, query, language, childInfo } = req.body;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // Update to use gemini-1.5-flash model which is supported in the current API version
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // Construct prompt with language specification
         const prompt = `
