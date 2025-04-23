@@ -23,6 +23,8 @@ router.post('/weight_for_age', verifyToken, whoController.wfa)
 router.post('/weight_for_height', verifyToken, whoController.wfh)
 router.post('/length_height_for_age', verifyToken, whoController.lhfa);
 router.post('/bmi_for_age', verifyToken, whoController.bfa);
+router.pos('/update_height/:childId', verifyToken, childActivity.updateHeight);
+router.post('/update_weight/:childId', verifyToken, childActivity.updateWeight);
 
 
 // Add more routes as needed

@@ -161,3 +161,76 @@ exports.generateMonthlySummary = async (req, res) => {
     return res.status(500).json({ error: "Failed to generate monthly summary" });
   }
 };
+
+
+exports.updateHeight = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { height } = req.body;
+
+    if (!height || typeof height !== 'number' || height <= 0) {
+      return res.status(400).json({
+        message: 'Height must be a positive number.',
+      });
+    }
+
+    const updatedChild = await ChildProfile.findByIdAndUpdate(
+      childId,
+      { height },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedChild) {
+      return res.status(404).json({ message: 'Child not found.' });
+    }
+
+    res.status(200).json({
+      message: 'Height updated successfully',
+      updatedProfile: updatedChild,
+    });
+
+  } catch (error) {
+    console.error('Error updating height:', error);
+    res.status(500).json({
+      message: 'Failed to update height',
+      error: error.message,
+    });
+  }
+};
+
+
+
+exports.updateWeight = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { weight } = req.body;
+
+    if (!weight || typeof weight !== 'number' || weight <= 0) {
+      return res.status(400).json({
+        message: 'Weight must be a positive number.',
+      });
+    }
+
+    const updatedChild = await ChildProfile.findByIdAndUpdate(
+      childId,
+      { weight },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedChild) {
+      return res.status(404).json({ message: 'Child not found.' });
+    }
+
+    res.status(200).json({
+      message: 'Weight updated successfully',
+      updatedProfile: updatedChild,
+    });
+
+  } catch (error) {
+    console.error('Error updating weight:', error);
+    res.status(500).json({
+      message: 'Failed to update weight',
+      error: error.message,
+    });
+  }
+};
