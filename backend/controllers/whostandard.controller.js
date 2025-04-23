@@ -29,6 +29,8 @@ exports.wfa = async (req, res) => {
     try {
         const { childId } = req.params;
 
+        console.log("childId", childId);
+
         // Fetch child data from DB using the childId
         const child = await Child.findById(childId);
 
@@ -36,9 +38,15 @@ exports.wfa = async (req, res) => {
             return res.status(404).json({ error: 'Child not found' });
         }
 
-        const { dob, weight, gender,height } = child;
+        const { dateOfBirth, weight, gender, height } = child;
+        console.log("child", child);
+        console.log("dateOfBirth", dateOfBirth);
+
+        console.log("weight", weight);
+        console.log("gender", gender);
+        console.log("height", height);
         const currentDate = new Date();
-        const birthDate = new Date(dob);
+        const birthDate = new Date(dateOfBirth);
 
         // Calculate age in days
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
@@ -80,7 +88,7 @@ exports.wfa = async (req, res) => {
             input: {
                 gender,
                 weight,
-                dob,
+                dateOfBirth,
             },
             reference: {
                 day: reference.Day,
@@ -130,7 +138,7 @@ exports.wfh = async (req, res) => {
             return res.status(404).json({ error: 'Child not found' });
         }
 
-        const { dob, weight, gender , height } = child;
+        const { dateOfBirth, weight, gender, height } = child;
 
         // Validate required inputs
         if (!gender || weight === undefined || height === undefined) {
@@ -140,7 +148,7 @@ exports.wfh = async (req, res) => {
         }
 
         const currentDate = new Date();
-        const birthDate = new Date(dob);
+        const birthDate = new Date(dateOfBirth);
 
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25; // Convert days to years
@@ -164,7 +172,7 @@ exports.wfh = async (req, res) => {
             });
         }
 
-        let wfl= false;
+        let wfl = false;
         let dataset
         if (ageInYears < 2 && gender.toLowerCase() === 'male') {
             dataset = wflBoyDataset;
@@ -188,7 +196,7 @@ exports.wfh = async (req, res) => {
             minLength = Math.min(...dataset.map(item => item.Length));
             maxLength = Math.max(...dataset.map(item => item.Length));
         }
-        else{
+        else {
             minLength = Math.min(...dataset.map(item => item.Height));
             maxLength = Math.max(...dataset.map(item => item.Height));
         }
@@ -200,7 +208,7 @@ exports.wfh = async (req, res) => {
             });
         }
 
-        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height),wfl);
+        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height), wfl);
         let zScore;
         try {
             zScore = calculateWfhZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
@@ -221,10 +229,10 @@ exports.wfh = async (req, res) => {
 
         // Interpret results
         let interpretation
-        if(!wfl){
+        if (!wfl) {
             interpretation = interpretWeightForHeight(zScore, gender, height);
         }
-        else{
+        else {
             interpretation = interpretWeightForLength(zScore, gender, height)
         }
 
@@ -283,17 +291,17 @@ exports.lhfa = async (req, res) => {
             return res.status(404).json({ error: 'Child not found' });
         }
 
-        const { dob, weight, gender,height } = child;
+        const { dateOfBirth, weight, gender, height } = child;
 
         // Validate required inputs
-        if (!dob || !height || !gender) {
+        if (!dateOfBirth || !height || !gender) {
             return res.status(400).json({
-                error: 'Missing required parameters. Please provide dob, height, and gender.'
+                error: 'Missing required parameters. Please provide dateOfBirth, height, and gender.'
             });
         }
 
         const currentDate = new Date();
-        const birthDate = new Date(dob);
+        const birthDate = new Date(dateOfBirth);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25;
 
@@ -340,7 +348,7 @@ exports.lhfa = async (req, res) => {
             input: {
                 gender,
                 height,
-                dob
+                dateOfBirth
             },
             reference: {
                 day: reference.Day,
@@ -384,9 +392,9 @@ exports.bfa = async (req, res) => {
             return res.status(404).json({ error: 'Child not found' });
         }
 
-        const { dob, weight, gender,height } = child;
+        const { dateOfBirth, weight, gender, height } = child;
         const currentDate = new Date();
-        const birthDate = new Date(dob);
+        const birthDate = new Date(dateOfBirth);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25;
 
@@ -416,7 +424,7 @@ exports.bfa = async (req, res) => {
 
         return res.json({
             assessment: 'bmi-for-age',
-            input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dob },
+            input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dateOfBirth },
             reference: {
                 day: reference.Day,
                 median: reference.M,

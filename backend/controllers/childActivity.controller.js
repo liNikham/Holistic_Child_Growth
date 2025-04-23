@@ -163,74 +163,55 @@ exports.generateMonthlySummary = async (req, res) => {
 };
 
 
-exports.updateHeight = async (req, res) => {
+// Update a child's height and weight
+exports.updateChildMeasurements = async (req, res) => {
   try {
-    const { childId } = req.params;
-    const { height } = req.body;
+    const { childId, height, weight } = req.body;
 
-    if (!height || typeof height !== 'number' || height <= 0) {
+    if (!childId || !height || !weight) {
       return res.status(400).json({
-        message: 'Height must be a positive number.',
+        message: 'Missing required fields: childId, height, and weight are required',
+        received: { childId, height, weight }
+      });
+    }
+
+    // Validate height and weight are positive numbers
+    if (height <= 0 || weight <= 0) {
+      return res.status(400).json({
+        message: 'Height and weight must be positive numbers',
+        received: { height, weight }
       });
     }
 
     const updatedChild = await ChildProfile.findByIdAndUpdate(
       childId,
-      { height },
-      { new: true, runValidators: true }
+      {
+        height: Number(height),
+        weight: Number(weight)
+      },
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!updatedChild) {
-      return res.status(404).json({ message: 'Child not found.' });
-    }
-
-    res.status(200).json({
-      message: 'Height updated successfully',
-      updatedProfile: updatedChild,
-    });
-
-  } catch (error) {
-    console.error('Error updating height:', error);
-    res.status(500).json({
-      message: 'Failed to update height',
-      error: error.message,
-    });
-  }
-};
-
-
-
-exports.updateWeight = async (req, res) => {
-  try {
-    const { childId } = req.params;
-    const { weight } = req.body;
-
-    if (!weight || typeof weight !== 'number' || weight <= 0) {
-      return res.status(400).json({
-        message: 'Weight must be a positive number.',
+      return res.status(404).json({
+        message: 'Child profile not found',
+        childId
       });
     }
 
-    const updatedChild = await ChildProfile.findByIdAndUpdate(
-      childId,
-      { weight },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedChild) {
-      return res.status(404).json({ message: 'Child not found.' });
-    }
-
     res.status(200).json({
-      message: 'Weight updated successfully',
-      updatedProfile: updatedChild,
+      message: 'Child measurements updated successfully',
+      child: updatedChild
     });
-
   } catch (error) {
-    console.error('Error updating weight:', error);
+    console.error('Error updating child measurements:', error);
     res.status(500).json({
-      message: 'Failed to update weight',
+      message: 'Error updating child measurements',
       error: error.message,
+      stack: error.stack
     });
   }
 };

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaChild, FaBirthdayCake, FaVenusMars, FaChartLine } from 'react-icons/fa';
+import { FaChild, FaBirthdayCake, FaVenusMars, FaChartLine, FaRuler, FaWeight, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 
 const Dashboard = () => {
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingChild, setEditingChild] = useState(null);
+  const [measurements, setMeasurements] = useState({ height: 0, weight: 0 });
   const navigate = useNavigate();
 
   // Fetch child profiles
@@ -31,7 +33,66 @@ const Dashboard = () => {
 
   // Navigate to the child's activity calendar page
   const handleCardClick = (childId) => {
-    navigate(`/child/${childId}/activities`);
+    if (!editingChild) {
+      navigate(`/child/${childId}/activities`);
+    }
+  };
+
+  // Start editing a child's measurements
+  const handleEditClick = (e, child) => {
+    e.stopPropagation(); // Prevent card click
+    setEditingChild(child._id);
+    setMeasurements({ height: child.height, weight: child.weight });
+  };
+
+  // Cancel editing
+  const handleCancelEdit = (e) => {
+    e.stopPropagation(); // Prevent card click
+    setEditingChild(null);
+  };
+
+  // Handle input change
+  const handleMeasurementChange = (e) => {
+    const { name, value } = e.target;
+    setMeasurements(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Save updated measurements
+  const handleSaveMeasurements = async (e, childId) => {
+    e.stopPropagation(); // Prevent card click
+
+    try {
+      const token = localStorage.getItem('authToken');
+      await axios.post('/api/children/updateMeasurements',
+        {
+          childId,
+          height: measurements.height,
+          weight: measurements.weight
+        },
+        {
+          headers: {
+            Authorization: `${token}`,
+          },
+        }
+      );
+
+      // Update the local state with new measurements
+      setChildren(prevChildren =>
+        prevChildren.map(child =>
+          child._id === childId
+            ? { ...child, height: measurements.height, weight: measurements.weight }
+            : child
+        )
+      );
+
+      setEditingChild(null);
+    } catch (error) {
+      console.error('Error updating measurements:', error);
+      alert('Failed to update measurements. Please try again.');
+    }
   };
 
   return (
@@ -69,10 +130,78 @@ const Dashboard = () => {
                     <FaVenusMars className="mr-2" />
                     <span>Gender: {child.gender}</span>
                   </div>
-                  <div className="flex items-center text-gray-600">
-                    <FaChartLine className="mr-2" />
-                    <span>View Growth Journey →</span>
-                  </div>
+
+                  {editingChild === child._id ? (
+                    <div>
+                      <div className="flex items-center text-gray-600 mb-2">
+                        <FaRuler className="mr-2" />
+                        <input
+                          type="number"
+                          name="height"
+                          value={measurements.height}
+                          onChange={handleMeasurementChange}
+                          className="border rounded p-1 w-20 text-center mr-1"
+                          min="1"
+                          step="0.1"
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span>cm</span>
+                      </div>
+
+                      <div className="flex items-center text-gray-600 mb-3">
+                        <FaWeight className="mr-2" />
+                        <input
+                          type="number"
+                          name="weight"
+                          value={measurements.weight}
+                          onChange={handleMeasurementChange}
+                          className="border rounded p-1 w-20 text-center mr-1"
+                          min="0.1"
+                          step="0.1"
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span>kg</span>
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={(e) => handleSaveMeasurements(e, child._id)}
+                          className="flex items-center bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                        >
+                          <FaSave className="mr-1" /> Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="flex items-center bg-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-400"
+                        >
+                          <FaTimes className="mr-1" /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center text-gray-600">
+                        <FaRuler className="mr-2" />
+                        <span>Height: {child.height} cm</span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <FaWeight className="mr-2" />
+                        <span>Weight: {child.weight} kg</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center text-gray-600">
+                          <FaChartLine className="mr-2" />
+                          <span>View Growth Journey</span>
+                        </div>
+                        <button
+                          onClick={(e) => handleEditClick(e, child)}
+                          className="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200"
+                        >
+                          <FaEdit />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
