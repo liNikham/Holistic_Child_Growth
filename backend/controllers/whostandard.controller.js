@@ -17,6 +17,8 @@ const wflBoyDataset = require('../../dataset/downloads/wfl_boys_0-to-2-years_zsc
 const wflGirlDataset = require('../../dataset/downloads/wfl_girls_0-to-2-years_zscores.json')
 const lhfaBoyDataset = require('../../dataset/downloads/lhfa_boys_2-to-5-years_zscores.json')
 const lhfaGirlDataset = require('../../dataset/downloads/lhfa_girls_2-to-5-years_zscores.json')
+const lhflBoyDataset = require('../../dataset/downloads/lhfa_boys_0-to-2-years_zscores.json')
+const lhflGirlDataset = require('../../dataset/downloads/lhfa_girls_0-to-2-years_zscores.json')
 const bfaBoyDataset = require('../../dataset/downloads/bmi_boys_2-to-5-years_zscores.json')
 const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_zscores.json')
 
@@ -254,14 +256,22 @@ exports.wfh = async (req, res) => {
 exports.lhfa = async (req, res) => {
     try {
         const { dob, height, gender } = req.body;
+
+        // Validate required inputs
+        if (!dob || !height || !gender) {
+            return res.status(400).json({
+                error: 'Missing required parameters. Please provide dob, height, and gender.'
+            });
+        }
+
         const currentDate = new Date();
         const birthDate = new Date(dob);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25;
 
-        if (ageInYears < 2 || ageInYears > 5) {
+        if (ageInYears > 5) {
             return res.status(400).json({
-                error: 'This assessment is designed for children between 2 and 5 years of age.'
+                error: 'This assessment is designed for children between 0 and 5 years of age.'
             });
         }
 
@@ -277,14 +287,33 @@ exports.lhfa = async (req, res) => {
             });
         }
 
-        const dataset = gender.toLowerCase() === 'male' ? lhfaBoyDataset : lhfaGirlDataset;
-        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // reuse age-based reference finder
+        let isLength = false;
+        let dataset;
+
+        if (ageInYears < 2) {
+            // Use Length-for-Age datasets
+            isLength = true;
+            dataset = gender.toLowerCase() === 'male' ? lhflBoyDataset : lhflGirlDataset;
+        } else {
+            // Use Height-for-Age datasets
+            dataset = gender.toLowerCase() === 'male' ? lhfaBoyDataset : lhfaGirlDataset;
+        }
+
+        // Find the closest height/length in the dataset
+        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // Reusing function by age
+
         const zScore = calculateWfaZscore(parseFloat(height), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
         const percentile = zScoreToPercentileForWfa(zScore);
 
+        const assessmentType = isLength ? 'length-for-age' : 'height-for-age';
+
         return res.json({
-            assessment: 'length/height-for-age',
-            input: { gender, height, dob },
+            assessment: assessmentType,
+            input: {
+                gender,
+                height,
+                dob
+            },
             reference: {
                 day: reference.Day,
                 median: reference.M,
@@ -314,6 +343,7 @@ exports.lhfa = async (req, res) => {
         });
     }
 };
+
 
 exports.bfa = async (req, res) => {
     try {
