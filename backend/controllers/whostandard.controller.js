@@ -9,22 +9,32 @@ const { calculateAgeInDays,
     findClosestAgeReferenceDataForWfa,
     findClosestAgeReferenceDataForWfh,
 } = require('../utils/commonUtils');
+
+// Import datasets
 const wfaBoyDataset = require('../../dataset/downloads/wfa_boys_0-to-5-years_zscores.json');
 const wfaGirlDataset = require('../../dataset/downloads/wfa_girls_0-to-5-years_zscores.json');
-const wfhBoyDataset = require('../../dataset/downloads/wfh_boys_2-to-5-years_zscores.json')
-const wfhGirlDataset = require('../../dataset/downloads/wfh_girls_2-to-5-years_zscores.json')
-const wflBoyDataset = require('../../dataset/downloads/wfl_boys_0-to-2-years_zscores.json')
-const wflGirlDataset = require('../../dataset/downloads/wfl_girls_0-to-2-years_zscores.json')
-const lhfaBoyDataset = require('../../dataset/downloads/lhfa_boys_2-to-5-years_zscores.json')
-const lhfaGirlDataset = require('../../dataset/downloads/lhfa_girls_2-to-5-years_zscores.json')
-const bfaBoyDataset = require('../../dataset/downloads/bmi_boys_2-to-5-years_zscores.json')
-const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_zscores.json')
+const wfhBoyDataset = require('../../dataset/downloads/wfh_boys_2-to-5-years_zscores.json');
+const wfhGirlDataset = require('../../dataset/downloads/wfh_girls_2-to-5-years_zscores.json');
+const wflBoyDataset = require('../../dataset/downloads/wfl_boys_0-to-2-years_zscores.json');
+const wflGirlDataset = require('../../dataset/downloads/wfl_girls_0-to-2-years_zscores.json');
+const lhfaBoyDataset = require('../../dataset/downloads/lhfa_boys_2-to-5-years_zscores.json');
+const lhfaGirlDataset = require('../../dataset/downloads/lhfa_girls_2-to-5-years_zscores.json');
+const bfaBoyDataset = require('../../dataset/downloads/bmi_boys_2-to-5-years_zscores.json');
+const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_zscores.json');
 
-
+// Import GrowthMeasurement model
+const GrowthMeasurement = require('../models/growthMeasurement.model');
 
 exports.wfa = async (req, res) => {
     try {
-        const { dob, weight, gender } = req.body;
+        const { dob, weight, gender, childId } = req.body;
+        
+        if (!childId) {
+            return res.status(400).json({
+                error: 'Child ID is required for storing measurements'
+            });
+        }
+        
         const currentDate = new Date();
         const birthDate = new Date(dob);
 
@@ -51,19 +61,18 @@ exports.wfa = async (req, res) => {
         const dataset = gender.toLowerCase() === 'male' ? wfaBoyDataset : wfaGirlDataset;
         // Find the closest reference data
         const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays);
-        console.log('Reference Data:', reference);
+        
         // Calculate z-score
         const zScore = calculateWfaZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
-        console.log('Z-Score:', zScore);
+        
         // Calculate percentile
         const percentile = zScoreToPercentileForWfa(zScore);
-        console.log('Percentile:', percentile);
 
         // Interpret results
         const interpretation = interpretWeightForAge(zScore, gender, ageInDays);
 
-        // Return the assessment results
-        return res.json({
+        // Prepare result object
+        const result = {
             assessment: 'weight-for-age',
             input: {
                 gender,
@@ -95,8 +104,37 @@ exports.wfa = async (req, res) => {
                 SD3: reference.SD3,
                 SD4: reference.SD4
             }
+        };
+
+        // Store measurement in database
+        const growthMeasurement = new GrowthMeasurement({
+            childId,
+            date: currentDate,
+            measurementType: 'weight-for-age',
+            weight: parseFloat(weight),
+            zScore: parseFloat(zScore.toFixed(2)),
+            percentile,
+            status: interpretation.status,
+            severity: interpretation.severity,
+            recommendation: interpretation.recommendation,
+            details: interpretation.details,
+            referenceRanges: {
+                SD4neg: reference.SD4neg,
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3,
+                SD4: reference.SD4
+            }
         });
-        // Continue processing with the calculated age in days
+
+        await growthMeasurement.save();
+
+        // Return the assessment results
+        return res.json(result);
 
     } catch (error) {
         console.error('Error processing query:', error);
@@ -105,11 +143,17 @@ exports.wfa = async (req, res) => {
             details: error.message
         });
     }
-}
+};
 
 exports.wfh = async (req, res) => {
     try {
-        const { gender, weight, height, dob } = req.body;
+        const { gender, weight, height, dob, childId } = req.body;
+
+        if (!childId) {
+            return res.status(400).json({
+                error: 'Child ID is required for storing measurements'
+            });
+        }
 
         // Validate required inputs
         if (!gender || weight === undefined || height === undefined) {
@@ -136,15 +180,14 @@ exports.wfh = async (req, res) => {
             });
         }
 
-
         if (typeof weight !== 'number' || weight <= 0) {
             return res.status(400).json({
                 error: 'Weight must be a positive number.'
             });
         }
 
-        let wfl= false;
-        let dataset
+        let wfl = false;
+        let dataset;
         if (ageInYears < 2 && gender.toLowerCase() === 'male') {
             dataset = wflBoyDataset;
             wfl = true;
@@ -160,18 +203,14 @@ exports.wfh = async (req, res) => {
             dataset = wfhBoyDataset;
         }
 
-
-        let minHeight
-        let maxHeight
+        let minHeight, maxHeight;
         if (wfl) {
-            minLength = Math.min(...dataset.map(item => item.Length));
-            maxLength = Math.max(...dataset.map(item => item.Length));
+            minHeight = Math.min(...dataset.map(item => item.Length));
+            maxHeight = Math.max(...dataset.map(item => item.Length));
+        } else {
+            minHeight = Math.min(...dataset.map(item => item.Height));
+            maxHeight = Math.max(...dataset.map(item => item.Height));
         }
-        else{
-            minLength = Math.min(...dataset.map(item => item.Height));
-            maxLength = Math.max(...dataset.map(item => item.Height));
-        }
-
 
         if (height < minHeight || height > maxHeight) {
             return res.status(400).json({
@@ -179,7 +218,7 @@ exports.wfh = async (req, res) => {
             });
         }
 
-        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height),wfl);
+        const reference = findClosestAgeReferenceDataForWfh(dataset, parseFloat(height), wfl);
         let zScore;
         try {
             zScore = calculateWfhZscore(parseFloat(weight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
@@ -199,24 +238,23 @@ exports.wfh = async (req, res) => {
         const percentile = zScoreToPercentileForWfh(zScore);
 
         // Interpret results
-        let interpretation
-        if(!wfl){
+        let interpretation;
+        if (!wfl) {
             interpretation = interpretWeightForHeight(zScore, gender, height);
-        }
-        else{
-            interpretation = interpretWeightForLength(zScore, gender, height)
+        } else {
+            interpretation = interpretWeightForLength(zScore, gender, height);
         }
 
-        // Return the assessment results
-        return res.json({
-            assessment: 'weight-for-height',
+        // Prepare result object
+        const result = {
+            assessment: wfl ? 'weight-for-length' : 'weight-for-height',
             input: {
                 gender,
                 weight,
                 height
             },
             reference: {
-                height: reference.Height,
+                height: reference.Height || reference.Length,
                 median: reference.M,
                 L: reference.L,
                 S: reference.S
@@ -239,8 +277,37 @@ exports.wfh = async (req, res) => {
                 SD2: reference.SD2,
                 SD3: reference.SD3
             }
+        };
+
+        // Store measurement in database
+        const growthMeasurement = new GrowthMeasurement({
+            childId,
+            date: currentDate,
+            measurementType: wfl ? 'weight-for-length' : 'weight-for-height',
+            weight: parseFloat(weight),
+            height: parseFloat(height),
+            zScore: parseFloat(zScore.toFixed(2)),
+            percentile,
+            status: interpretation.status,
+            severity: interpretation.severity,
+            nutritionalStatus: interpretation.nutritionalStatus,
+            recommendation: interpretation.recommendation,
+            details: interpretation.details,
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
         });
 
+        await growthMeasurement.save();
+
+        // Return the assessment results
+        return res.json(result);
 
     } catch (error) {
         console.error('Error processing query:', error);
@@ -249,11 +316,18 @@ exports.wfh = async (req, res) => {
             details: error.message
         });
     }
-}
+};
 
 exports.lhfa = async (req, res) => {
     try {
-        const { dob, height, gender } = req.body;
+        const { dob, height, gender, childId } = req.body;
+        
+        if (!childId) {
+            return res.status(400).json({
+                error: 'Child ID is required for storing measurements'
+            });
+        }
+        
         const currentDate = new Date();
         const birthDate = new Date(dob);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
@@ -282,7 +356,8 @@ exports.lhfa = async (req, res) => {
         const zScore = calculateWfaZscore(parseFloat(height), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
         const percentile = zScoreToPercentileForWfa(zScore);
 
-        return res.json({
+        // Prepare result object
+        const result = {
             assessment: 'length/height-for-age',
             input: { gender, height, dob },
             reference: {
@@ -304,7 +379,30 @@ exports.lhfa = async (req, res) => {
                 SD2: reference.SD2,
                 SD3: reference.SD3
             }
+        };
+
+        // Store measurement in database
+        const growthMeasurement = new GrowthMeasurement({
+            childId,
+            date: currentDate,
+            measurementType: 'length/height-for-age',
+            height: parseFloat(height),
+            zScore: parseFloat(zScore.toFixed(2)),
+            percentile,
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
         });
+
+        await growthMeasurement.save();
+
+        return res.json(result);
 
     } catch (error) {
         console.error('Error processing LHFA:', error);
@@ -317,7 +415,14 @@ exports.lhfa = async (req, res) => {
 
 exports.bfa = async (req, res) => {
     try {
-        const { dob, height, weight, gender } = req.body;
+        const { dob, height, weight, gender, childId } = req.body;
+        
+        if (!childId) {
+            return res.status(400).json({
+                error: 'Child ID is required for storing measurements'
+            });
+        }
+        
         const currentDate = new Date();
         const birthDate = new Date(dob);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
@@ -347,7 +452,8 @@ exports.bfa = async (req, res) => {
         const zScore = calculateWfaZscore(parseFloat(bmi), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
         const percentile = zScoreToPercentileForWfa(zScore);
 
-        return res.json({
+        // Prepare result object
+        const result = {
             assessment: 'bmi-for-age',
             input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dob },
             reference: {
@@ -369,7 +475,32 @@ exports.bfa = async (req, res) => {
                 SD2: reference.SD2,
                 SD3: reference.SD3
             }
+        };
+
+        // Store measurement in database
+        const growthMeasurement = new GrowthMeasurement({
+            childId,
+            date: currentDate,
+            measurementType: 'bmi-for-age',
+            weight: parseFloat(weight),
+            height: parseFloat(height),
+            bmi: parseFloat(bmi.toFixed(2)),
+            zScore: parseFloat(zScore.toFixed(2)),
+            percentile,
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
         });
+
+        await growthMeasurement.save();
+
+        return res.json(result);
 
     } catch (error) {
         console.error('Error processing BFA:', error);
@@ -379,5 +510,3 @@ exports.bfa = async (req, res) => {
         });
     }
 };
-
-
