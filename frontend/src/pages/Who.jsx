@@ -774,18 +774,6 @@ const Who = () => {
 
                 <GrowthVisualGuide standardType={standardType} />
 
-                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-2">How to read these charts</h3>
-                  <p className="text-gray-700 mb-3">
-                    The charts show your child's measurements as Z-scores, which compare them to WHO standards:
-                  </p>
-                  <ul className="list-disc pl-5 text-gray-700 space-y-1">
-                    <li>A Z-score of 0 means the child is exactly at the median (average)</li>
-                    <li>A Z-score between -2 and +2 is generally considered within the normal range</li>
-                    <li>A Z-score below -2 may indicate undernutrition or growth faltering</li>
-                    <li>A Z-score above +2 may indicate overweight or other growth concerns</li>
-                  </ul>
-                </div>
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg">
