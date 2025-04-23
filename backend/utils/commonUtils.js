@@ -260,6 +260,7 @@ exports.interpretWeightForHeight = (zScore, gender, height) => {
 
     return interpretation;
 }
+
 exports.interpretWeightForLength =(zScore, gender, length)=> {
     let interpretation = {
       status: '',
@@ -325,3 +326,55 @@ exports.interpretWeightForLength =(zScore, gender, length)=> {
     
     return interpretation;
   }
+  
+  exports.interpretLengthHeightForAge = (zScore, gender, ageInDays) => {
+    const ageInMonths = ageInDays / 30.4375;
+    const isUnderTwoYears = ageInMonths < 24;
+    const measurement = isUnderTwoYears ? "length" : "height";
+    
+    let interpretation = {
+        status: '',
+        severity: '',
+        recommendation: '',
+        details: ''
+    };
+
+    // Interpretation based on WHO guidelines for length/height-for-age
+    if (zScore < -3) {
+        interpretation.status = `Severely stunted`;
+        interpretation.severity = "Critical";
+        interpretation.recommendation = "Immediate healthcare provider consultation required";
+        interpretation.details = `Child's ${measurement} is significantly below the expected range for their age, indicating potential severe chronic malnutrition or other health concerns.`;
+    } else if (zScore < -2) {
+        interpretation.status = "Stunted";
+        interpretation.severity = "Moderate concern";
+        interpretation.recommendation = "Consult healthcare provider";
+        interpretation.details = `Child's ${measurement} is below the expected range for their age, which may indicate chronic malnutrition or growth issues.`;
+    } else if (zScore > 3) {
+        interpretation.status = "Very tall";
+        interpretation.severity = "Monitor";
+        interpretation.recommendation = "Discuss with healthcare provider at next visit";
+        interpretation.details = `Child's ${measurement} is significantly above the expected range for their age. While usually not a concern, consider genetic factors or potential endocrine disorders if this is a sudden change.`;
+    } else if (zScore > 2) {
+        interpretation.status = "Tall";
+        interpretation.severity = "Low concern";
+        interpretation.recommendation = "Continue routine growth monitoring";
+        interpretation.details = `Child's ${measurement} is above the expected range for their age. This is generally normal, especially if consistent with family patterns.`;
+    } else {
+        interpretation.status = "Normal";
+        interpretation.severity = "No concern";
+        interpretation.recommendation = "Continue regular growth monitoring";
+        interpretation.details = `Child's ${measurement} is within the normal range for their age.`;
+    }
+
+    // Add age-specific recommendations
+    if (ageInMonths < 6) {
+        interpretation.recommendation += ". For infants under 6 months, ensure adequate nutrition through exclusive breastfeeding when possible.";
+    } else if (ageInMonths < 24) {
+        interpretation.recommendation += ". For children 6-24 months, provide diverse nutrient-rich complementary foods along with continued breastfeeding.";
+    } else {
+        interpretation.recommendation += ". Ensure a balanced diet with adequate protein, calcium, and vitamin D for optimal bone growth.";
+    }
+
+    return interpretation;
+};
