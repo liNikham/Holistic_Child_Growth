@@ -16,7 +16,8 @@ import {
     FaStar,
     FaMedal,
     FaChevronLeft,
-    FaChevronRight
+    FaChevronRight,
+    FaGlobe
 } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 // import { useAuth } from '../context/AuthContext';
@@ -73,7 +74,13 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
             path: '/smart-insights',
             name: 'smartInsights',
             icon: FaBrain
-        }
+        },
+        {
+            path: '/who',
+            name: 'who',
+            icon: FaGlobe
+        },
+
     ];
 
     const handleMouseEnter = (title) => {

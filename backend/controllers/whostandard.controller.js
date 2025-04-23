@@ -15,6 +15,10 @@ const wfhBoyDataset = require('../../dataset/downloads/wfh_boys_2-to-5-years_zsc
 const wfhGirlDataset = require('../../dataset/downloads/wfh_girls_2-to-5-years_zscores.json')
 const wflBoyDataset = require('../../dataset/downloads/wfl_boys_0-to-2-years_zscores.json')
 const wflGirlDataset = require('../../dataset/downloads/wfl_girls_0-to-2-years_zscores.json')
+const lhfaBoyDataset = require('../../dataset/downloads/lhfa_boys_2-to-5-years_zscores.json')
+const lhfaGirlDataset = require('../../dataset/downloads/lhfa_girls_2-to-5-years_zscores.json')
+const bfaBoyDataset = require('../../dataset/downloads/bmi_boys_2-to-5-years_zscores.json')
+const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_zscores.json')
 
 
 
@@ -246,4 +250,134 @@ exports.wfh = async (req, res) => {
         });
     }
 }
+
+exports.lhfa = async (req, res) => {
+    try {
+        const { dob, height, gender } = req.body;
+        const currentDate = new Date();
+        const birthDate = new Date(dob);
+        const ageInDays = calculateAgeInDays(birthDate, currentDate);
+        const ageInYears = ageInDays / 365.25;
+
+        if (ageInYears < 2 || ageInYears > 5) {
+            return res.status(400).json({
+                error: 'This assessment is designed for children between 2 and 5 years of age.'
+            });
+        }
+
+        if (!['male', 'female'].includes(gender.toLowerCase())) {
+            return res.status(400).json({
+                error: 'Gender must be either "male" or "female".'
+            });
+        }
+
+        if (typeof height !== 'number' || height <= 0) {
+            return res.status(400).json({
+                error: 'Height must be a positive number.'
+            });
+        }
+
+        const dataset = gender.toLowerCase() === 'male' ? lhfaBoyDataset : lhfaGirlDataset;
+        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // reuse age-based reference finder
+        const zScore = calculateWfaZscore(parseFloat(height), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+        const percentile = zScoreToPercentileForWfa(zScore);
+
+        return res.json({
+            assessment: 'length/height-for-age',
+            input: { gender, height, dob },
+            reference: {
+                day: reference.Day,
+                median: reference.M,
+                L: reference.L,
+                S: reference.S
+            },
+            results: {
+                zScore: parseFloat(zScore.toFixed(2)),
+                percentile
+            },
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
+        });
+
+    } catch (error) {
+        console.error('Error processing LHFA:', error);
+        res.status(500).json({
+            error: 'Failed to process LHFA query',
+            details: error.message
+        });
+    }
+};
+
+exports.bfa = async (req, res) => {
+    try {
+        const { dob, height, weight, gender } = req.body;
+        const currentDate = new Date();
+        const birthDate = new Date(dob);
+        const ageInDays = calculateAgeInDays(birthDate, currentDate);
+        const ageInYears = ageInDays / 365.25;
+
+        if (ageInYears < 2 || ageInYears > 5) {
+            return res.status(400).json({
+                error: 'This assessment is designed for children between 2 and 5 years of age.'
+            });
+        }
+
+        if (!['male', 'female'].includes(gender.toLowerCase())) {
+            return res.status(400).json({
+                error: 'Gender must be either "male" or "female".'
+            });
+        }
+
+        if (typeof height !== 'number' || height <= 0 || typeof weight !== 'number' || weight <= 0) {
+            return res.status(400).json({
+                error: 'Weight and height must be positive numbers.'
+            });
+        }
+
+        const bmi = weight / Math.pow(height / 100, 2); // height in cm to m
+        const dataset = gender.toLowerCase() === 'male' ? bfaBoyDataset : bfaGirlDataset;
+        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // dataset has age in days
+        const zScore = calculateWfaZscore(parseFloat(bmi), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+        const percentile = zScoreToPercentileForWfa(zScore);
+
+        return res.json({
+            assessment: 'bmi-for-age',
+            input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dob },
+            reference: {
+                day: reference.Day,
+                median: reference.M,
+                L: reference.L,
+                S: reference.S
+            },
+            results: {
+                zScore: parseFloat(zScore.toFixed(2)),
+                percentile
+            },
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            }
+        });
+
+    } catch (error) {
+        console.error('Error processing BFA:', error);
+        res.status(500).json({
+            error: 'Failed to process BFA query',
+            details: error.message
+        });
+    }
+};
+
 

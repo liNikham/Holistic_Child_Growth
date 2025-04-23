@@ -21,6 +21,8 @@ router.get('/journal/:childId', verifyToken, recommendationController.getJournal
 router.post('/parent-queries/ask', verifyToken, parentQueryController.askQuestion);
 router.get('/weight_for_age', verifyToken, whoController.wfa )
 router.get('/weight_for_height', verifyToken, whoController.wfh )
+router.get('/length_height_for_age', verifyToken, whoController.lhfa);
+router.get('/bmi_for_age', verifyToken, whoController.bfa);
 
 
 // Add more routes as needed
