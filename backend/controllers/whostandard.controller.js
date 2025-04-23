@@ -1,3 +1,4 @@
+const Child = require('../models/childProfile.model');
 const { calculateAgeInDays,
     interpretWeightForAge,
     interpretWeightForHeight,
@@ -26,7 +27,16 @@ const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_z
 
 exports.wfa = async (req, res) => {
     try {
-        const { dob, weight, gender } = req.body;
+        const { childId } = req.params;
+
+        // Fetch child data from DB using the childId
+        const child = await Child.findById(childId);
+
+        if (!child) {
+            return res.status(404).json({ error: 'Child not found' });
+        }
+
+        const { dob, weight, gender,height } = child;
         const currentDate = new Date();
         const birthDate = new Date(dob);
 
@@ -111,7 +121,16 @@ exports.wfa = async (req, res) => {
 
 exports.wfh = async (req, res) => {
     try {
-        const { gender, weight, height, dob } = req.body;
+        const { childId } = req.params;
+
+        // Fetch child data from DB using the childId
+        const child = await Child.findById(childId);
+
+        if (!child) {
+            return res.status(404).json({ error: 'Child not found' });
+        }
+
+        const { dob, weight, gender , height } = child;
 
         // Validate required inputs
         if (!gender || weight === undefined || height === undefined) {
@@ -255,7 +274,16 @@ exports.wfh = async (req, res) => {
 
 exports.lhfa = async (req, res) => {
     try {
-        const { dob, height, gender } = req.body;
+        const { childId } = req.params;
+
+        // Fetch child data from DB using the childId
+        const child = await Child.findById(childId);
+
+        if (!child) {
+            return res.status(404).json({ error: 'Child not found' });
+        }
+
+        const { dob, weight, gender,height } = child;
 
         // Validate required inputs
         if (!dob || !height || !gender) {
@@ -347,7 +375,16 @@ exports.lhfa = async (req, res) => {
 
 exports.bfa = async (req, res) => {
     try {
-        const { dob, height, weight, gender } = req.body;
+        const { childId } = req.params;
+
+        // Fetch child data from DB using the childId
+        const child = await Child.findById(childId);
+
+        if (!child) {
+            return res.status(404).json({ error: 'Child not found' });
+        }
+
+        const { dob, weight, gender,height } = child;
         const currentDate = new Date();
         const birthDate = new Date(dob);
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
