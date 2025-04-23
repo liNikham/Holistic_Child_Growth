@@ -25,8 +25,8 @@ const lhflBoyDataset = require('../../dataset/downloads/lhfa_boys_0-to-2-years_z
 const lhflGirlDataset = require('../../dataset/downloads/lhfa_girls_0-to-2-years_zscores.json')
 const bfaBoyDataset = require('../../dataset/downloads/bmi_boys_2-to-5-years_zscores.json')
 const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_zscores.json')
-const bfaBoyZeroToTwoDataset = require('../../dataset/downloads/bmi_boys_0-to-2-years_zcores.json')
-const bfaGirlZeroToTwoDataset = require('../../dataset/downloads/bmi_girls_0-to-2-years_zscores.json')
+const bflBoyDataset = require('../../dataset/downloads/bmi_boys_0-to-2-years_zcores.json')
+const bflGirlDataset = require('../../dataset/downloads/bmi_girls_0-to-2-years_zscores.json');
 
 
 
@@ -542,8 +542,6 @@ exports.lhfa = async (req, res) => {
 exports.bfa = async (req, res) => {
     try {
         const { childId } = req.params;
-
-        // Fetch child data from DB using the childId
         const child = await Child.findById(childId);
 
         if (!child) {
@@ -556,85 +554,77 @@ exports.bfa = async (req, res) => {
         const ageInDays = calculateAgeInDays(birthDate, currentDate);
         const ageInYears = ageInDays / 365.25;
 
-        if ( ageInYears > 5) {
-            return res.status(400).json({
-                error: 'This assessment is designed for children less than 5 years of age.'
-            });
-        }
-
         if (!['male', 'female'].includes(gender.toLowerCase())) {
-            return res.status(400).json({
-                error: 'Gender must be either "male" or "female".'
-            });
+            return res.status(400).json({ error: 'Gender must be either "male" or "female".' });
         }
 
         if (typeof height !== 'number' || height <= 0 || typeof weight !== 'number' || weight <= 0) {
+            return res.status(400).json({ error: 'Weight and height must be positive numbers.' });
+        }
+
+        const bmi = weight / Math.pow(height / 100, 2); // Convert height from cm to meters
+        let dataset, reference;
+
+        if (ageInYears < 2) {
+            dataset = gender.toLowerCase() === 'male' ? bflBoyDataset : bflGirlDataset;
+        } else if (ageInYears >= 2 && ageInYears <= 5) {
+            dataset = gender.toLowerCase() === 'male' ? bfaBoyDataset : bfaGirlDataset;
+        } else {
             return res.status(400).json({
-                error: 'Weight and height must be positive numbers.'
+                error: 'This assessment is only designed for children up to 5 years of age.'
             });
         }
 
-        const bmi = weight / Math.pow(height / 100, 2); // height in cm to m
-        let dataset;
-        if(ageInYears < 2) {
-            dataset = gender.toLowerCase() === 'male' ? bfaBoyZeroToTwoDataset : bfaGirlZeroToTwoDataset;
-        }
-        else{
-            dataset = gender.toLowerCase() === 'male' ? bfaBoyDataset : bfaGirlDataset;
-        }
-    
-        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // dataset has age in days
+        reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays);
         const zScore = calculateWfaZscore(parseFloat(bmi), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
         const percentile = zScoreToPercentileForWfa(zScore);
 
-        // Add interpretation for BMI
+        // Interpretation logic
         let status, severity, nutritionalStatus, recommendation, details;
-
         if (zScore < -3) {
             status = 'Severely Underweight';
             severity = 'Severe';
             nutritionalStatus = 'Severe Acute Malnutrition';
             recommendation = 'Urgent medical evaluation needed. Consider nutritional intervention and medical assessment.';
-            details = 'BMI is significantly below the expected range for age. This may indicate severe malnutrition.';
+            details = 'BMI is significantly below the expected range for age.';
         } else if (zScore >= -3 && zScore < -2) {
             status = 'Underweight';
             severity = 'Moderate';
             nutritionalStatus = 'Moderate Acute Malnutrition';
-            recommendation = 'Nutritional assessment and intervention recommended. Consult with a healthcare provider.';
-            details = 'BMI is below the expected range for age. This may indicate undernutrition.';
+            recommendation = 'Nutritional assessment and intervention recommended.';
+            details = 'BMI is below the expected range for age.';
         } else if (zScore >= -2 && zScore < -1) {
             status = 'Risk of Underweight';
             severity = 'Mild';
             nutritionalStatus = 'At Risk';
-            recommendation = 'Monitor nutrition and growth. Ensure adequate caloric intake for age.';
-            details = 'BMI is slightly below the expected range. Continue monitoring growth.';
+            recommendation = 'Monitor nutrition and growth.';
+            details = 'BMI is slightly below the expected range.';
         } else if (zScore >= -1 && zScore <= 1) {
             status = 'Normal Weight';
             severity = 'None';
             nutritionalStatus = 'Normal';
-            recommendation = 'Continue healthy diet and physical activity. Regular growth monitoring advised.';
-            details = 'BMI is within the normal range for age.';
+            recommendation = 'Continue healthy diet and physical activity.';
+            details = 'BMI is within the normal range.';
         } else if (zScore > 1 && zScore <= 2) {
             status = 'Risk of Overweight';
             severity = 'Mild';
             nutritionalStatus = 'At Risk';
-            recommendation = 'Monitor diet and encourage physical activity. Limit high-calorie foods.';
-            details = 'BMI is slightly above the expected range. Consider lifestyle adjustments to prevent progression to overweight.';
+            recommendation = 'Monitor diet and encourage physical activity.';
+            details = 'BMI is slightly above the expected range.';
         } else if (zScore > 2 && zScore <= 3) {
             status = 'Overweight';
             severity = 'Moderate';
             nutritionalStatus = 'Overweight';
-            recommendation = 'Dietary assessment and increased physical activity recommended. Consult with a healthcare provider.';
-            details = 'BMI is above the expected range for age. This may lead to health issues if not addressed.';
+            recommendation = 'Consult with a healthcare provider.';
+            details = 'BMI is above the expected range.';
         } else {
             status = 'Obesity';
             severity = 'Severe';
             nutritionalStatus = 'Obesity';
-            recommendation = 'Medical evaluation needed. Consider nutritional counseling and lifestyle intervention.';
-            details = 'BMI is significantly above the expected range for age. This may increase risk for various health problems.';
+            recommendation = 'Medical evaluation and nutritional counseling recommended.';
+            details = 'BMI is significantly above the expected range.';
         }
 
-        // Generate historical simulation data for demonstration (in a real app, this would come from the database)
         const historicalData = generateHistoricalBmiData(birthDate, currentDate, bmi, zScore, gender.toLowerCase());
 
         const growthMeasurement = new GrowthMeasurement({
@@ -697,6 +687,7 @@ exports.bfa = async (req, res) => {
         });
     }
 };
+
 
 // Helper function to generate simulated historical BMI data
 function generateHistoricalBmiData(birthDate, currentDate, currentBmi, currentZScore, gender) {
