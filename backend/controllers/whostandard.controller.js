@@ -28,6 +28,7 @@ const bfaGirlDataset = require('../../dataset/downloads/bmi_girls_2-to-5-years_z
 const bflBoyDataset = require('../../dataset/downloads/bmi_boys_0-to-2-years_zcores.json')
 const bflGirlDataset = require('../../dataset/downloads/bmi_girls_0-to-2-years_zscores.json');
 
+const GrowthMeasurement = require('../models/growthMeasurement.model');
 
 
 exports.wfa = async (req, res) => {
@@ -463,6 +464,8 @@ exports.lhfa = async (req, res) => {
         const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays); // Reusing function by age
 
         const zScore = calculateWfaZscore(parseFloat(height), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+
+        console.log("zScore", zScore);
         const percentile = zScoreToPercentileForWfh(zScore);
 
         const interpretation = interpretLengthHeightForAge(zScore, gender, ageInDays);

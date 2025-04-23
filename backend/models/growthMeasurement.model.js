@@ -13,7 +13,7 @@ const growthMeasurementSchema = new mongoose.Schema({
   },
   measurementType: { 
     type: String, 
-    enum: ['weight-for-age', 'weight-for-height', 'length/height-for-age', 'bmi-for-age'],
+    enum: ['weight-for-age', 'weight-for-height', 'height-for-age', 'length-for-age','bmi-for-age'],
     required: true
   },
   // Input values
