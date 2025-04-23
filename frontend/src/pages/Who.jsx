@@ -107,14 +107,15 @@ const Who = () => {
   const prepareChartData = (data) => {
     if (!data) return;
 
+    // Handle static Z-score visualization (bar chart)
     const labels = ['Child'];
     const childValue = data.results.zScore;
 
     // Get the reference ranges
     const ranges = data.referenceRanges;
 
-    // Convert to chart data
-    const chartData = {
+    // Convert to chart data for the bar chart
+    const staticChartData = {
       labels,
       datasets: [
         {
@@ -169,7 +170,121 @@ const Who = () => {
       ]
     };
 
-    setChartData({ chartData, standardData: data });
+    // Process historical data if available
+    let timeSeriesData = null;
+
+    if (data.historicalData && data.historicalData.length > 0) {
+      const historyLabels = data.historicalData.map(entry => {
+        const date = new Date(entry.date);
+        return `${date.getMonth() + 1}/${date.getFullYear().toString().substr(2, 2)}`;
+      });
+
+      // Reference lines for the historical chart
+      const medianLine = Array(historyLabels.length).fill(0); // 0 is the median z-score
+      const lowLine = Array(historyLabels.length).fill(-2);
+      const highLine = Array(historyLabels.length).fill(2);
+
+      // Child's actual z-scores over time
+      const zScores = data.historicalData.map(entry => entry.zScore);
+
+      timeSeriesData = {
+        labels: historyLabels,
+        datasets: [
+          {
+            label: 'Z-Score Over Time',
+            data: zScores,
+            borderColor: 'rgb(53, 162, 235)',
+            backgroundColor: 'rgba(53, 162, 235, 0.1)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 3,
+          },
+          {
+            label: 'Median',
+            data: medianLine,
+            borderColor: 'rgba(75, 192, 192, 0.8)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          },
+          {
+            label: 'Low Threshold (-2SD)',
+            data: lowLine,
+            borderColor: 'rgba(255, 159, 64, 0.8)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          },
+          {
+            label: 'High Threshold (+2SD)',
+            data: highLine,
+            borderColor: 'rgba(255, 159, 64, 0.8)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          },
+        ]
+      };
+
+      // For BMI or Weight, add the actual values as a second chart
+      if (standardType === 'bfa' && data.historicalData[0].bmi) {
+        const bmiValues = data.historicalData.map(entry => entry.bmi);
+        const bmiChart = {
+          labels: historyLabels,
+          datasets: [
+            {
+              label: 'BMI Over Time',
+              data: bmiValues,
+              borderColor: 'rgb(153, 102, 255)',
+              backgroundColor: 'rgba(153, 102, 255, 0.1)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              pointRadius: 3,
+            }
+          ]
+        };
+
+        timeSeriesData = {
+          zScoreChart: timeSeriesData,
+          valueChart: bmiChart
+        };
+      }
+
+      if (standardType === 'wfa' && data.historicalData[0].weight) {
+        const weightValues = data.historicalData.map(entry => entry.weight);
+        const weightChart = {
+          labels: historyLabels,
+          datasets: [
+            {
+              label: 'Weight Over Time (kg)',
+              data: weightValues,
+              borderColor: 'rgb(255, 99, 132)',
+              backgroundColor: 'rgba(255, 99, 132, 0.1)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              pointRadius: 3,
+            }
+          ]
+        };
+
+        timeSeriesData = {
+          zScoreChart: timeSeriesData,
+          valueChart: weightChart
+        };
+      }
+    }
+
+    setChartData({
+      staticChartData,
+      timeSeriesData,
+      standardData: data
+    });
   };
 
   // Handle child selection
@@ -279,7 +394,7 @@ const Who = () => {
   };
 
   // Chart options
-  const options = {
+  const staticChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -311,6 +426,223 @@ const Who = () => {
         },
       },
     },
+  };
+
+  // Time series chart options
+  const timeSeriesOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+      title: {
+        display: true,
+        text: `${getTitle()} - Z-Score History`,
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Month/Year',
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Z-Score',
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+  };
+
+  // Value chart options (for BMI, weight, etc.)
+  const valueChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+      title: {
+        display: true,
+        text: standardType === 'bfa' ? 'BMI History' : 'Weight History',
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Month/Year',
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: standardType === 'bfa' ? 'BMI' : 'Weight (kg)',
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
+        beginAtZero: false,
+      },
+    },
+  };
+
+  // Render the charts section
+  const renderCharts = () => {
+    if (!chartData) return null;
+
+    return (
+      <div className="space-y-8">
+        {/* Static Z-Score Chart */}
+        <div className="h-80">
+          <Line options={staticChartOptions} data={chartData.staticChartData} />
+        </div>
+
+        {/* Historical Charts if available */}
+        {chartData.timeSeriesData && (
+          <div className="mt-8 border-t pt-6">
+            <h3 className="text-xl font-semibold mb-4">Growth History</h3>
+
+            {/* Z-Score Time Series */}
+            <div className="h-80 mb-6">
+              <Line
+                options={timeSeriesOptions}
+                data={chartData.timeSeriesData.zScoreChart || chartData.timeSeriesData}
+              />
+            </div>
+
+            {/* BMI/Weight Value Chart if available */}
+            {chartData.timeSeriesData.valueChart && (
+              <div className="h-80 mt-8">
+                <Line options={valueChartOptions} data={chartData.timeSeriesData.valueChart} />
+              </div>
+            )}
+
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h4 className="font-medium text-yellow-800 mb-2">About Historical Data</h4>
+              <p className="text-sm text-yellow-700">
+                This chart shows the progression of your child's growth over time. The dotted lines represent
+                the standard thresholds. Staying within these lines indicates healthy growth.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Visual guide component to explain growth metrics with child-friendly illustrations
+  const GrowthVisualGuide = ({ standardType }) => {
+    const getVisualContent = () => {
+      switch (standardType) {
+        case 'wfa':
+          return {
+            title: 'Understanding Weight for Age',
+            description: 'Weight for Age shows if your child weighs what is expected for their age.',
+            rangeItems: [
+              { color: 'bg-red-500', label: 'Severely Underweight', description: 'Much less than expected', icon: '😔' },
+              { color: 'bg-yellow-500', label: 'Underweight', description: 'Less than expected', icon: '🙁' },
+              { color: 'bg-green-500', label: 'Normal Weight', description: 'Healthy weight for age', icon: '😊' },
+              { color: 'bg-yellow-500', label: 'Overweight', description: 'More than expected', icon: '🙂' },
+              { color: 'bg-red-500', label: 'Severely Overweight', description: 'Much more than expected', icon: '😕' },
+            ]
+          };
+        case 'wfh':
+          return {
+            title: 'Understanding Weight for Height',
+            description: "Weight for Height shows if your child's weight is appropriate for how tall they are.",
+            rangeItems: [
+              { color: 'bg-red-500', label: 'Severe Wasting', description: 'Much less weight than expected for height', icon: '😔' },
+              { color: 'bg-yellow-500', label: 'Wasting', description: 'Less weight than expected for height', icon: '🙁' },
+              { color: 'bg-green-500', label: 'Normal', description: 'Right weight for height', icon: '😊' },
+              { color: 'bg-yellow-500', label: 'Overweight', description: 'More weight than expected for height', icon: '🙂' },
+              { color: 'bg-red-500', label: 'Obesity', description: 'Much more weight than expected for height', icon: '😕' },
+            ]
+          };
+        case 'lhfa':
+          return {
+            title: 'Understanding Height for Age',
+            description: 'Height for Age shows if your child is growing taller as expected for their age.',
+            rangeItems: [
+              { color: 'bg-red-500', label: 'Severely Stunted', description: 'Much shorter than expected', icon: '😔' },
+              { color: 'bg-yellow-500', label: 'Stunted', description: 'Shorter than expected', icon: '🙁' },
+              { color: 'bg-green-500', label: 'Normal Height', description: 'Growing well in height', icon: '😊' },
+              { color: 'bg-yellow-500', label: 'Tall', description: 'Taller than expected', icon: '🙂' },
+              { color: 'bg-green-500', label: 'Very Tall', description: 'Much taller than expected', icon: '😃' },
+            ]
+          };
+        case 'bfa':
+          return {
+            title: 'Understanding BMI for Age',
+            description: 'BMI (Body Mass Index) for Age shows if your child has a healthy body weight considering their height and age.',
+            rangeItems: [
+              { color: 'bg-red-500', label: 'Severely Underweight', description: 'BMI much lower than expected', icon: '😔' },
+              { color: 'bg-yellow-500', label: 'Underweight', description: 'BMI lower than expected', icon: '🙁' },
+              { color: 'bg-green-500', label: 'Normal BMI', description: 'Healthy BMI for age', icon: '😊' },
+              { color: 'bg-yellow-500', label: 'Overweight', description: 'BMI higher than expected', icon: '🙂' },
+              { color: 'bg-red-500', label: 'Obesity', description: 'BMI much higher than expected', icon: '😕' },
+            ]
+          };
+        default:
+          return {
+            title: 'Understanding Growth Standards',
+            description: "WHO growth standards help track your child's healthy growth and development.",
+            rangeItems: [
+              { color: 'bg-green-500', label: 'Normal Growth', description: 'Healthy development', icon: '😊' },
+            ]
+          };
+      }
+    };
+
+    const content = getVisualContent();
+
+    return (
+      <div className="mt-8 bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-xl font-semibold mb-3">{content.title}</h3>
+        <p className="text-gray-600 mb-6">{content.description}</p>
+
+        <div className="w-full h-6 rounded-full flex overflow-hidden mb-4">
+          {content.rangeItems.map((item, idx) => (
+            <div
+              key={idx}
+              className={`${item.color} flex-1 flex items-center justify-center text-xs text-white font-bold`}
+            >
+              {item.icon}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+          {content.rangeItems.map((item, idx) => (
+            <div key={idx} className="border rounded-lg p-3">
+              <div className={`w-full h-2 ${item.color} rounded-full mb-2`}></div>
+              <h4 className="font-medium text-sm">{item.label}</h4>
+              <p className="text-xs text-gray-500">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -436,16 +768,16 @@ const Who = () => {
               </div>
             ) : chartData ? (
               <>
-                <div className="h-80 mb-6">
-                  <Line options={options} data={chartData.chartData} />
-                </div>
+                {renderCharts()}
 
                 {renderInterpretation()}
 
+                <GrowthVisualGuide standardType={standardType} />
+
                 <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-2">How to read this chart</h3>
+                  <h3 className="text-lg font-semibold mb-2">How to read these charts</h3>
                   <p className="text-gray-700 mb-3">
-                    The chart shows your child's measurement as a Z-score, which compares them to WHO standards:
+                    The charts show your child's measurements as Z-scores, which compare them to WHO standards:
                   </p>
                   <ul className="list-disc pl-5 text-gray-700 space-y-1">
                     <li>A Z-score of 0 means the child is exactly at the median (average)</li>
