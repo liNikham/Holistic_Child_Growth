@@ -86,8 +86,38 @@ exports.wfa = async (req, res) => {
         // Interpret results
         const interpretation = interpretWeightForAge(zScore, gender, ageInDays);
 
-        // Prepare result object
-        const result = {
+        // Generate historical data for time-series chart
+        const historicalData = generateHistoricalWeightData(birthDate, currentDate, weight, gender.toLowerCase());
+
+        const growthMeasurement = new GrowthMeasurement({
+            childId,
+            date: currentDate,
+            measurementType: 'weight-for-age',
+            weight: parseFloat(weight),
+            zScore: parseFloat(zScore.toFixed(2)),
+            percentile,
+            status: interpretation.status,
+            severity: interpretation.severity,
+            recommendation: interpretation.recommendation,
+            details: interpretation.details,
+            referenceRanges: {
+                SD4neg: reference.SD4neg,
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3,
+                SD4: reference.SD4
+            }
+
+        });
+
+        await growthMeasurement.save();
+
+        // Return the assessment results
+        return res.json({
             assessment: 'weight-for-age',
             input: {
                 gender,
@@ -118,38 +148,10 @@ exports.wfa = async (req, res) => {
                 SD2: reference.SD2,
                 SD3: reference.SD3,
                 SD4: reference.SD4
-            }
-        };
-
-        // Store measurement in database
-        const growthMeasurement = new GrowthMeasurement({
-            childId,
-            date: currentDate,
-            measurementType: 'weight-for-age',
-            weight: parseFloat(weight),
-            zScore: parseFloat(zScore.toFixed(2)),
-            percentile,
-            status: interpretation.status,
-            severity: interpretation.severity,
-            recommendation: interpretation.recommendation,
-            details: interpretation.details,
-            referenceRanges: {
-                SD4neg: reference.SD4neg,
-                SD3neg: reference.SD3neg,
-                SD2neg: reference.SD2neg,
-                SD1neg: reference.SD1neg,
-                median: reference.SD0,
-                SD1: reference.SD1,
-                SD2: reference.SD2,
-                SD3: reference.SD3,
-                SD4: reference.SD4
-            }
+            },
+            historicalData
         });
-
-        await growthMeasurement.save();
-
-        // Return the assessment results
-        return res.json(result);
+        // Continue processing with the calculated age in days
 
     } catch (error) {
         console.error('Error processing query:', error);
@@ -158,7 +160,71 @@ exports.wfa = async (req, res) => {
             details: error.message
         });
     }
-};
+}
+
+// Helper function to generate simulated historical weight data
+function generateHistoricalWeightData(birthDate, currentDate, currentWeight, gender) {
+    const now = new Date(currentDate);
+    const records = [];
+
+    // Calculate age in months currently
+    const ageInMonthsNow = calculateAgeInDays(birthDate, now) / 30.4375;
+
+    // Generate data points every month from birth until now
+    for (let months = 0; months <= ageInMonthsNow; months += 1) {
+        // Skip too frequent records for older children
+        if (ageInMonthsNow > 24 && months % 3 !== 0 && months !== ageInMonthsNow) {
+            continue;
+        }
+
+        const recordDate = new Date(birthDate);
+        recordDate.setMonth(birthDate.getMonth() + months);
+
+        // Don't include future dates
+        if (recordDate > now) continue;
+
+        const ageInDays = calculateAgeInDays(birthDate, recordDate);
+
+        // Generate realistic weight based on age - simulated growth curve
+        // Infants typically triple birth weight by 12 months
+        // Using WHO growth charts as a rough reference
+        let expectedWeight;
+
+        if (ageInDays < 365) {
+            // For first year, weight gain is more rapid
+            const birthWeight = 3.5; // Assume average birth weight in kg
+            expectedWeight = birthWeight + (currentWeight - birthWeight) * (months / ageInMonthsNow) * 1.5;
+        } else {
+            // After first year, slower but steady growth
+            expectedWeight = currentWeight * (ageInDays / calculateAgeInDays(birthDate, now)) * 0.9;
+        }
+
+        // Add random variation (±5%)
+        const randomVariation = (Math.random() - 0.5) * 0.1;
+        const historicalWeight = Math.max(2.5, expectedWeight * (1 + randomVariation));
+
+        // Calculate z-score for this historical point
+        const dataset = gender === 'male' ? wfaBoyDataset : wfaGirlDataset;
+        let reference;
+        try {
+            reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays);
+            const zScore = calculateWfaZscore(parseFloat(historicalWeight), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+
+            records.push({
+                date: recordDate.toISOString(),
+                weight: parseFloat(historicalWeight.toFixed(2)),
+                zScore: parseFloat(zScore.toFixed(2)),
+                ageInMonths: Math.floor(ageInDays / 30.4375)
+            });
+        } catch (error) {
+            // Skip this record if the age is outside the reference range
+            continue;
+        }
+    }
+
+    // Sort by date ascending
+    return records.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
 
 exports.wfh = async (req, res) => {
     try {
@@ -521,32 +587,56 @@ exports.bfa = async (req, res) => {
         const zScore = calculateWfaZscore(parseFloat(bmi), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
         const percentile = zScoreToPercentileForWfa(zScore);
 
-        // Prepare result object
-        const result = {
-            assessment: 'bmi-for-age',
-            input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dateOfBirth },
-            reference: {
-                day: reference.Day,
-                median: reference.M,
-                L: reference.L,
-                S: reference.S
-            },
-            results: {
-                zScore: parseFloat(zScore.toFixed(2)),
-                percentile
-            },
-            referenceRanges: {
-                SD3neg: reference.SD3neg,
-                SD2neg: reference.SD2neg,
-                SD1neg: reference.SD1neg,
-                median: reference.SD0,
-                SD1: reference.SD1,
-                SD2: reference.SD2,
-                SD3: reference.SD3
-            }
-        };
+        // Add interpretation for BMI
+        let status, severity, nutritionalStatus, recommendation, details;
 
-        // Store measurement in database
+        if (zScore < -3) {
+            status = 'Severely Underweight';
+            severity = 'Severe';
+            nutritionalStatus = 'Severe Acute Malnutrition';
+            recommendation = 'Urgent medical evaluation needed. Consider nutritional intervention and medical assessment.';
+            details = 'BMI is significantly below the expected range for age. This may indicate severe malnutrition.';
+        } else if (zScore >= -3 && zScore < -2) {
+            status = 'Underweight';
+            severity = 'Moderate';
+            nutritionalStatus = 'Moderate Acute Malnutrition';
+            recommendation = 'Nutritional assessment and intervention recommended. Consult with a healthcare provider.';
+            details = 'BMI is below the expected range for age. This may indicate undernutrition.';
+        } else if (zScore >= -2 && zScore < -1) {
+            status = 'Risk of Underweight';
+            severity = 'Mild';
+            nutritionalStatus = 'At Risk';
+            recommendation = 'Monitor nutrition and growth. Ensure adequate caloric intake for age.';
+            details = 'BMI is slightly below the expected range. Continue monitoring growth.';
+        } else if (zScore >= -1 && zScore <= 1) {
+            status = 'Normal Weight';
+            severity = 'None';
+            nutritionalStatus = 'Normal';
+            recommendation = 'Continue healthy diet and physical activity. Regular growth monitoring advised.';
+            details = 'BMI is within the normal range for age.';
+        } else if (zScore > 1 && zScore <= 2) {
+            status = 'Risk of Overweight';
+            severity = 'Mild';
+            nutritionalStatus = 'At Risk';
+            recommendation = 'Monitor diet and encourage physical activity. Limit high-calorie foods.';
+            details = 'BMI is slightly above the expected range. Consider lifestyle adjustments to prevent progression to overweight.';
+        } else if (zScore > 2 && zScore <= 3) {
+            status = 'Overweight';
+            severity = 'Moderate';
+            nutritionalStatus = 'Overweight';
+            recommendation = 'Dietary assessment and increased physical activity recommended. Consult with a healthcare provider.';
+            details = 'BMI is above the expected range for age. This may lead to health issues if not addressed.';
+        } else {
+            status = 'Obesity';
+            severity = 'Severe';
+            nutritionalStatus = 'Obesity';
+            recommendation = 'Medical evaluation needed. Consider nutritional counseling and lifestyle intervention.';
+            details = 'BMI is significantly above the expected range for age. This may increase risk for various health problems.';
+        }
+
+        // Generate historical simulation data for demonstration (in a real app, this would come from the database)
+        const historicalData = generateHistoricalBmiData(birthDate, currentDate, bmi, zScore, gender.toLowerCase());
+
         const growthMeasurement = new GrowthMeasurement({
             childId,
             date: currentDate,
@@ -569,7 +659,35 @@ exports.bfa = async (req, res) => {
 
         await growthMeasurement.save();
 
-        return res.json(result);
+        return res.json({
+            assessment: 'bmi-for-age',
+            input: { gender, height, weight, bmi: parseFloat(bmi.toFixed(2)), dateOfBirth },
+            reference: {
+                day: reference.Day,
+                median: reference.M,
+                L: reference.L,
+                S: reference.S
+            },
+            results: {
+                zScore: parseFloat(zScore.toFixed(2)),
+                percentile,
+                status,
+                severity,
+                nutritionalStatus,
+                recommendation,
+                details
+            },
+            referenceRanges: {
+                SD3neg: reference.SD3neg,
+                SD2neg: reference.SD2neg,
+                SD1neg: reference.SD1neg,
+                median: reference.SD0,
+                SD1: reference.SD1,
+                SD2: reference.SD2,
+                SD3: reference.SD3
+            },
+            historicalData
+        });
 
     } catch (error) {
         console.error('Error processing BFA:', error);
@@ -579,3 +697,46 @@ exports.bfa = async (req, res) => {
         });
     }
 };
+
+// Helper function to generate simulated historical BMI data
+function generateHistoricalBmiData(birthDate, currentDate, currentBmi, currentZScore, gender) {
+    const now = new Date(currentDate);
+    const records = [];
+
+    // Get a 6-month interval between each data point, up to 24 months in the past
+    for (let months = 0; months <= 24; months += 3) {
+        const recordDate = new Date(now);
+        recordDate.setMonth(now.getMonth() - months);
+
+        // Don't include records from before the child was born
+        if (recordDate < birthDate) continue;
+
+        const ageInDays = calculateAgeInDays(birthDate, recordDate);
+
+        // Only generate records if the child was at least 2 years old at that point
+        if (ageInDays < 2 * 365.25) continue;
+
+        // Create slightly random but trending data
+        // For demonstration, we'll make the BMI trend slightly upward or downward
+        const trend = (months / 24) * (Math.random() > 0.5 ? -1 : 1) * 2;
+        const randomVariation = (Math.random() - 0.5) * 0.5;
+        const historicalBmi = Math.max(13, currentBmi + trend + randomVariation);
+
+        // Calculate z-score for this historical point
+        const dataset = gender === 'male' ? bfaBoyDataset : bfaGirlDataset;
+        const reference = findClosestAgeReferenceDataForWfa(dataset, ageInDays);
+        const zScore = calculateWfaZscore(parseFloat(historicalBmi), parseFloat(reference.L), parseFloat(reference.M), parseFloat(reference.S));
+
+        records.push({
+            date: recordDate.toISOString(),
+            bmi: parseFloat(historicalBmi.toFixed(2)),
+            zScore: parseFloat(zScore.toFixed(2)),
+            ageInMonths: Math.floor(ageInDays / 30.4375)
+        });
+    }
+
+    // Sort by date ascending
+    return records.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+
